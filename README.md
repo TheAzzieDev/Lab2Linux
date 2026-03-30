@@ -1,1 +1,1 @@
-"# Lab2Linux" 
+# Lab2Linux
