@@ -9,6 +9,7 @@
 #define FAT_BLOCK 1
 #define FAT_FREE 0
 #define FAT_EOF -1
+#define NUMBER_OF_BLOCKS 2048
 
 #define TYPE_FILE 0
 #define TYPE_DIR 1
@@ -28,9 +29,10 @@ class FS {
 private:
     Disk disk;
     // size of a FAT entry is 2 bytes
-    int16_t fat[BLOCK_SIZE/2];
 
+    bool fileExists(std::string fileName); 
 public:
+    int16_t fat[BLOCK_SIZE/2];
     FS();
     ~FS();
     // formats the disk, i.e., creates an empty file system

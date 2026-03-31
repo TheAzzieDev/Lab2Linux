@@ -51,6 +51,13 @@ test4: main.o test_script4.o fs.o disk.o
 test5: main.o test_script5.o fs.o disk.o
 	$(GCC) -std=c++11 -o test5 main.o test_script5.o disk.o fs.o
 
+MyTest.o: MyTest.cpp MyTest.h fs.h disk.h
+	$(GCC) -std=c++11 -O2 -c MyTest.cpp
+
+MyTest: main.o MyTest.o MyTest.o fs.o disk.o
+	$(GCC) -std=c++11 -o MyTest main.o MyTest.o disk.o fs.o
+
+
 tests: test1 test2 test3 test4 test5
 
 runtests: tests

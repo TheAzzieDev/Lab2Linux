@@ -1,17 +1,6 @@
 /******************************************************************************
- *             File : test_script1.cpp
- *        Author(s) : Håkan Grahn
- *          Created : 2020-12-01
- *    Last Modified : 2022-11-24
- * Last Modified by : HGR
- *          Version : v1.3
- * 
- * Test program to check Task 1 in Lab Assignment 3 in the 
- * operating system courses DV1628/DV1629
- *
- * Copyright 2020-2022 by Håkan Grahn
- * Blekinge Institute of Technology.
- * All Rights Reserved
+ https://www.youtube.com/watch?v=U1I5UY_vWXI 
+ THIS A FILE WHICH IS MYSELF USE FOR TESTING
  *****************************************************************************/
 
 #include <iostream>
@@ -69,9 +58,22 @@ Shell::run()
 
     std::cout << "Testing format()..." << std::endl;
     ret_val = filesystem.format();
-    if (ret_val) {
-        std::cout << "Error: format failed, error code " << ret_val << std::endl;
+
+    bool testVar = true;
+    if(filesystem.fat[0] != 0 || filesystem.fat[1] != 1)
+        testVar = false;
+    for(int i = 2; i < 2048; i++){
+        if(filesystem.fat[i] != 0)
+            testVar == false;
     }
+
+    if (ret_val || !testVar) {
+        std::cout << "Error: format failed, error code " << ret_val << std::endl;
+        return;
+    }
+    else
+        std::cout << "SUCCESS: FORMAT IS WORKING!!! " << std::endl;
+
     // check that the disk is empty
     std::cout << "Executing ls" << std::endl;
     std::cout << "Expected output:" << std::endl;

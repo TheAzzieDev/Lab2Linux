@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include "fs.h"
 
 FS::FS()
@@ -12,10 +13,16 @@ FS::~FS()
 }
 
 // formats the disk, i.e., creates an empty file system
+//FORMAT WORKS!!!
 int
 FS::format()
 {
     std::cout << "FS::format()\n";
+    this->fat[ROOT_BLOCK] = ROOT_BLOCK;
+    this->fat[FAT_BLOCK] = FAT_BLOCK;
+    for(int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++){
+        this->fat[i] = FAT_FREE;
+    }
     return 0;
 }
 
@@ -24,6 +31,8 @@ FS::format()
 int
 FS::create(std::string filepath)
 {
+    std::ifstream 
+
     std::cout << "FS::create(" << filepath << ")\n";
     return 0;
 }

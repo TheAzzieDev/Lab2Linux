@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdint>
 #include <fstream>
 
 #ifndef __DISK_H__
