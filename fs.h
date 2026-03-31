@@ -29,16 +29,20 @@ class FS {
 private:
     Disk disk;
     // size of a FAT entry is 2 bytes
-
-    bool fileExists(std::string fileName); 
 public:
     int16_t fat[BLOCK_SIZE/2];
     FS();
     ~FS();
     // formats the disk, i.e., creates an empty file system
     int format();
+
+    bool fileExists(std::string filename);
+    int getFreeBlock(int blockBefore = -1);
+
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
+    
+
     int create(std::string filepath);
     // cat <filepath> reads the content of a file and prints it on the screen
     int cat(std::string filepath);

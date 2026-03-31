@@ -64,7 +64,7 @@ Shell::run()
         testVar = false;
     for(int i = 2; i < 2048; i++){
         if(filesystem.fat[i] != 0)
-            testVar == false;
+            testVar = false;
     }
 
     if (ret_val || !testVar) {
@@ -73,6 +73,13 @@ Shell::run()
     }
     else
         std::cout << "SUCCESS: FORMAT IS WORKING!!! " << std::endl;
+
+
+    std::cout << "Running create! " << std::endl;
+    //ret_val = filesystem.create("test1.txt");
+    filesystem.fileExists("test");
+
+    return;
 
     // check that the disk is empty
     std::cout << "Executing ls" << std::endl;
@@ -91,6 +98,8 @@ Shell::run()
     if (ret_val) {
         std::cout << "Error: pwd failed, error code " << ret_val << std::endl;
     }
+
+   
     std::cout << "... done format()" << std::endl;
     PRINTDIV2;
 

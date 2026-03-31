@@ -1,3 +1,5 @@
+#include <cstdint>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include "fs.h"
@@ -26,14 +28,66 @@ FS::format()
     return 0;
 }
 
+int
+FS::getFreeBlock(int blockBefore)
+{
+    for(int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++){
+        if(this->fat[i] == FAT_FREE){
+            this->fat[i] = FAT_EOF;
+            if(blockBefore != -1)
+                this->fat[blockBefore] = i;
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool
+FS::fileExists(std::string filename)
+{
+    int block = 0;
+    uint8_t* buffer;
+    disk.read(block, buffer);
+
+    return false;
+}
+
 // create <filepath> creates a new file on the disk, the data content is
 // written on the following rows (ended with an empty row)
 int
 FS::create(std::string filepath)
 {
-    std::ifstream 
-
     std::cout << "FS::create(" << filepath << ")\n";
+    std::cout << "FS::create(" << filepath << ")\n";
+    std::ifstream f(filepath.c_str());
+    bool fileExists = f.good();
+    std::cout << "Ran this many times \n";
+    if(fileExists) 
+        return 304;
+    f.close();
+
+    std::ofstream file(filepath.c_str(), std::ios::out);
+    std::string userInput = "NONE";
+    std::cout << "Ran this many times \n";
+
+    int totalSize = 0;
+    int lineCount = 0;
+    int block = this->getFreeBlock();
+
+    while(std::getline(std::cin, userInput) && userInput.size()){
+        totalSize += userInput.size();
+        if(lineCount != 0)
+            userInput = "\n" + userInput;
+        if(totalSize > block){
+            block = this->getFreeBlock();
+        }
+        disk.write(block, (uint8_t*)userInput.c_str());
+        lineCount++;
+    }
+
+
+
+
     return 0;
 }
 
