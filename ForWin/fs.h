@@ -14,6 +14,16 @@
 #define FILE_NOT_FOUND 404
 #define BLOCK_FULL 413 
 
+#define DIR_ENTRY_SIZE 64
+#define AMOUNT_OF_DIRS 64
+#define PLACE_HOLDER_CHAR "?"
+#define FILENAME_CHARS 56
+#define SIZE_CHARS 4
+#define FIRST_BLK_CHARS 2
+#define TYPE_CHARS 1
+#define ACCESS_RIGHTS_CHARS 1
+
+
 #define TYPE_FILE 0
 #define TYPE_DIR 1
 #define READ 0x04
@@ -34,6 +44,7 @@ struct dir_entry {
     uint8_t access_rights);
 
     dir_entry(); 
+    dir_entry& operator=(const dir_entry& other);
 
 
     std::string serializeEntry(); 
@@ -42,11 +53,14 @@ struct dir_entry {
 
 class FS {
 private:
-    Disk disk;
+    int dirCount; 
+
+    std::string DirParseAttr(std::string inputString);  
     // size of a FAT entry is 2 bytes
 public:
     int16_t fat[BLOCK_SIZE/2];
-    dir_entry dirEntries[NUMBER_OF_BLOCKS / sizeof(dir_entry)]; 
+    Disk disk; 
+    dir_entry dirEntries[NUMBER_OF_BLOCKS / sizeof(dir_entry)]{};
     FS();
     ~FS();
     // formats the disk, i.e., creates an empty file system
@@ -56,7 +70,11 @@ public:
     int getFreeBlock(int blockBefore = -1);
 
     int writeDirectoryEntry(dir_entry entry); 
-    dir_entry findDirectoryEntry(std::string filepath);    
+    dir_entry* findDirectoryEntry(std::string filepath); 
+
+    void loadDirectory(); 
+
+    void copyToDirEntries(dir_entry& entry, dir_entry other);
 
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)

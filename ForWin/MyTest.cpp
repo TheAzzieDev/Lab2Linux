@@ -47,6 +47,10 @@ Shell::run()
     std::string input1 = "hej heja hejare\n";
     std::string input2 = "hej heja hejare hejast\n";
 
+    dir_entry entryT;
+    dir_entry entryA;
+    entryT = entryA; 
+
     PRINTDIV;
     std::cout << "\\ / \\ / \\ / \\ / \\ / \\ / \\     new test session     / \\ / \\ / \\ / \\ / \\ / \\ / \\ /" << std::endl;
     PRINTDIV;
@@ -75,24 +79,20 @@ Shell::run()
 
 
     std::cout << "Running create! " << std::endl;
-    //filesystem.cat("test2.txt");
+    filesystem.create("MARIA.txt");
+    filesystem.create("test3.txt");
+
+    uint8_t buffer[BLOCK_SIZE];
+    filesystem.disk.read(3, buffer);
+    std::string result = (char*)buffer;
+    std::cout << "result: " << result << "\n";
+    std::cout << "\n";
+    filesystem.cat("test3.txt");
+    filesystem.ls(); 
     std::cout << "\n";
 
 
-    std::string name = "";  
-    for (int i = 0; i < 55; i++) {
-        name += "A";
-    }
-    name += "\0";
-    
-   
-    dir_entry dirEntryTest((char*)name.c_str(), 4000, 2, 0, std::ios::in | std::ios::out);
-    std::string serializedString = dirEntryTest.serializeEntry();
-    filesystem.writeDirectoryEntry(dirEntryTest); 
-    dir_entry entryMan; 
-    std::string enFileName = entryMan.file_name; 
-    std::cout << "Entry Looks Like: " << (enFileName.compare("")) << "\n";
-  
+
 
     return;
 

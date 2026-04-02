@@ -6,10 +6,24 @@
 #include <string>
 #include "fs.h"
 
-FS::FS()
+std::string FS::DirParseAttr(std::string inputString) 
 {
 
+    while (inputString.size() > 0) {
+        std::string delimeter{ inputString[0] };
+        if (delimeter.compare(PLACE_HOLDER_CHAR) == 0) {
+            inputString = inputString.substr(1);
+        }
+        else
+            return inputString; 
+    }
+    return ""; 
+}
+
+FS::FS(){
     std::cout << "FS::FS()... Creating file system\n";
+    this->loadDirectory();
+    this->dirCount = 0;
 }
 
 FS::~FS()
@@ -28,6 +42,10 @@ FS::format()
     for(int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++){
         this->fat[i] = FAT_FREE;
     }
+    for (int i = 0; i < NUMBER_OF_BLOCKS; i++) {
+        std::string noData = "";
+        this->disk.write(i, (uint8_t*)noData.c_str());  
+    }
     return 0;
 }
 
@@ -37,8 +55,9 @@ FS::getFreeBlock(int blockBefore)
     for(int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++){
         if(this->fat[i] == FAT_FREE){
             this->fat[i] = FAT_EOF;
-            if(blockBefore != -1)
+            if (blockBefore != FAT_EOF) { 
                 this->fat[blockBefore] = i;
+            }
             return i;
         }
     }
@@ -62,10 +81,52 @@ int FS::writeDirectoryEntry(dir_entry entry)
     return 0;
 }
 
-dir_entry FS::findDirectoryEntry(std::string filepath)
+dir_entry* FS::findDirectoryEntry(std::string filepath)
 {
+    bool found = false;
+    int index = 0;
+    while (!found && index < NUMBER_OF_BLOCKS) {
+        dir_entry entry = this->dirEntries[index++];
+        std::string name = entry.file_name;  
+        if (filepath.compare(name)) {
+            return &entry;
+        }
+    }
+    return nullptr;
+}
 
-    return dir_entry();
+
+
+void FS::loadDirectory()
+{
+    uint8_t buffer[BLOCK_SIZE];
+    this->disk.read(ROOT_BLOCK, buffer);
+    std::string bufferResult = (char*)buffer;
+
+    while (bufferResult.size() != 0) { 
+        std::string currentEntry = bufferResult.substr(0, DIR_ENTRY_SIZE);
+        std::string filename = this->DirParseAttr(currentEntry.substr(0, FILENAME_CHARS));
+        uint32_t fileSize = atoi(this->DirParseAttr(currentEntry.substr(FILENAME_CHARS, SIZE_CHARS)).c_str()); 
+        uint16_t first_blk = atoi(this->DirParseAttr(currentEntry.substr(SIZE_CHARS + FILENAME_CHARS, FIRST_BLK_CHARS)).c_str()); 
+        uint8_t type = atoi(this->DirParseAttr(currentEntry.substr(FIRST_BLK_CHARS + SIZE_CHARS + FILENAME_CHARS, TYPE_CHARS).c_str()).c_str());
+        uint8_t access_rights = atoi(this->DirParseAttr(currentEntry.substr(TYPE_CHARS + FIRST_BLK_CHARS + SIZE_CHARS + FILENAME_CHARS, TYPE_CHARS)).c_str()); 
+
+        dir_entry newEntry((char*)filename.c_str(), fileSize, first_blk, type, access_rights);
+        this->dirEntries[this->dirCount++] = newEntry;
+
+        bufferResult = bufferResult.substr(DIR_ENTRY_SIZE);
+    }
+}
+
+void FS::copyToDirEntries(dir_entry& entry, dir_entry other)   
+{
+    for (int i = 0; i < FILENAME_CHARS; i++) {
+        entry.file_name[i] = other.file_name[i];
+    }
+    entry.size = other.size;
+    entry.first_blk = other.first_blk;
+    entry.type = other.type;
+    entry.access_rights = other.access_rights;
 }
 
 int
@@ -91,7 +152,6 @@ int
 FS::create(std::string filepath)
 {
     std::cout << "FS::create(" << filepath << ")\n";
-    std::cout << "FS::create(" << filepath << ")\n";
 
     if (this->getBlock(filepath))
         return FILE_EXISTS;  
@@ -108,7 +168,7 @@ FS::create(std::string filepath)
 
     strcpy((char *)buffer, (filepath + "\n").c_str());
     position += (filepath + "\n").size();
-    totalSize += position; 
+    totalSize += position;
 
     while(std::getline(std::cin, userInput) && userInput.size()){
         if(lineCount != 0)
@@ -125,7 +185,12 @@ FS::create(std::string filepath)
         lineCount++;
         position = totalSize; 
     }
-    disk.write(block, (uint8_t*)buffer); 
+    disk.write(block, (uint8_t*)buffer);
+    dir_entry newEntry((char*)filepath.c_str(), totalSize, firstBlock, 0, std::ios::in | std::ios::out);
+    this->copyToDirEntries(this->dirEntries[dirCount++], newEntry);
+
+    this->writeDirectoryEntry(newEntry);
+    
 
     return 0;
 }
@@ -135,26 +200,25 @@ int
 FS::cat(std::string filepath)
 {
     std::cout << "FS::cat(" << filepath << ")\n";
-     
-    int block = this->getBlock(filepath); 
-    if (!block)
-        return FILE_NOT_FOUND; 
-
-    int nextBlock = this->fat[block];
-    while (nextBlock != FAT_EOF) {
-        uint8_t buffer[BLOCK_SIZE]; 
-        disk.read(block, buffer); 
-        std::string myString = (char*)buffer;
-
-        std::cout << myString << "\n";
-
-        nextBlock = this->fat[block]; 
+    int index = 0;
+    while (index < DIR_ENTRY_SIZE) {
+        dir_entry entry = this->dirEntries[index++];
+        std::string filename = entry.file_name;
+        if (filename.compare(filepath) == 0) {
+            int block = entry.first_blk;
+            while (block != FAT_EOF) {
+                uint8_t buffer[BLOCK_SIZE];
+                this->disk.read(block, buffer);
+                std::string content = (char*)buffer;
+                 
+                std::cout << content.substr(content.find("\n") + 1) << "\n";
+                block = this->fat[block];
+            }
+            return 0;
+        }
     }
-
- 
-  
-
-    return 0; 
+   
+    return FILE_NOT_FOUND;  
 }
 
 // ls lists the content in the currect directory (files and sub-directories)
@@ -162,12 +226,14 @@ int
 FS::ls()
 {
     std::cout << "FS::ls()\n"; 
-    for (int block = FAT_BLOCK + 1; block < NUMBER_OF_BLOCKS; block++) { 
-        uint8_t buffer[BLOCK_SIZE]; 
-        disk.read(block, buffer); 
-        std::string myString = (char*)buffer; 
-        std::string filenameInDisk = myString.substr(0, myString.find("\n")); 
+    int index = 0;
+    while (index < this->dirCount) { 
+        dir_entry currentEntry = this->dirEntries[index++]; 
+        std::string filename = currentEntry.file_name;  
+        if(filename.compare("") != 0)
+            std::cout << filename << "\n";
     }
+
     return 0;
 }
 
@@ -241,6 +307,8 @@ FS::chmod(std::string accessrights, std::string filepath)
     return 0;
 }
 
+//ISSUE1
+//Might be a potentiall problem becuase c strings are null terminated!!!!!!
 dir_entry::dir_entry(char* file_name, uint32_t size, uint16_t first_blk, uint8_t type, uint8_t access_rights)
 {
     std::strcpy(this->file_name, file_name);
@@ -250,13 +318,26 @@ dir_entry::dir_entry(char* file_name, uint32_t size, uint16_t first_blk, uint8_t
     this->access_rights = access_rights;
 }
 
-dir_entry::dir_entry()
+dir_entry::dir_entry() 
 {
     std::strcpy(this->file_name, ""); 
-    this->size = size;
-    this->first_blk = ;
+    this->size = 0;
+    this->first_blk = 0; 
     this->type = 0; 
     this->access_rights = std::ios::in | std::ios::out; 
+}
+
+dir_entry& dir_entry::operator=(const dir_entry& other)
+{
+    // TODO: insert return statement here 
+    for (int i = 0; i < FILENAME_CHARS; i++) {
+        this->file_name[i] = other.file_name[i];
+    }
+    this->size = other.size;
+    this->first_blk = other.first_blk;
+    this->type = other.type;
+    this->access_rights = other.access_rights;
+    return *this;
 }
 
 
@@ -265,7 +346,7 @@ std::string dir_entry::serializeEntry()
 {
     std::string toReturn = "";
     std::string filenameString = (char*)this->file_name;
-    std::string placeHolder = "?";
+    std::string placeHolder = PLACE_HOLDER_CHAR; 
     int charsCap = (sizeof(this->file_name) / sizeof(char));  
 
     for (int i = 0; i < charsCap - filenameString.size(); i++)     
