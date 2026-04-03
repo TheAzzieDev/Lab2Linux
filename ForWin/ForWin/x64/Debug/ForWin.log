@@ -1,10 +1,6 @@
-﻿  fs.cpp
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(170,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(178,45): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(184,36): warning C4267: '+=': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(308,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(422,26): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
-C:\Users\asrie\source\repos\Lab2Linux\ForWin\fs.cpp(429,25): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+﻿  MyTest.cpp
+C:\Users\asrie\source\repos\Lab2Linux\ForWin\MyTest.cpp(45,9): warning C4101: 'fd': unreferenced local variable
+C:\Users\asrie\source\repos\Lab2Linux\ForWin\MyTest.cpp(46,9): warning C4101: 'fw': unreferenced local variable
   ForWin.vcxproj -> C:\Users\asrie\source\repos\Lab2Linux\ForWin\x64\Debug\ForWin.exe
   'pwsh.exe' is not recognized as an internal or external command,
   operable program or batch file.

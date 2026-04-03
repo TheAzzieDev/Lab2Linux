@@ -2,7 +2,7 @@
  https://www.youtube.com/watch?v=U1I5UY_vWXI 
  THIS A FILE WHICH IS MYSELF USE FOR TESTING
  *****************************************************************************/
-
+#pragma warning(disable : 4996) 
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -50,8 +50,13 @@ Shell::run()
     dir_entry entryT;
     dir_entry entryA;
     entryT = entryA; 
+    std::string hej = "\nHello There"; 
+    filesystem.testArgs((uint8_t*)hej.c_str());  
+  
 
-    PRINTDIV;
+
+
+ PRINTDIV;
     std::cout << "\\ / \\ / \\ / \\ / \\ / \\ / \\     new test session     / \\ / \\ / \\ / \\ / \\ / \\ / \\ /" << std::endl;
     PRINTDIV;
     std::cout << "Starting test sequence..." << std::endl;
@@ -66,7 +71,7 @@ Shell::run()
     if(filesystem.fat[0] != 0 || filesystem.fat[1] != 1)
         testVar = false;
     for(int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++){
-        if(filesystem.fat[i] != 0) 
+        if(filesystem.fat[i] != 0)
             testVar = false;
     }
 
@@ -88,26 +93,36 @@ Shell::run()
     std::cout << "result: " << result << "\n";
     std::cout << "\n";
     filesystem.cat("test3.txt");
-    filesystem.ls(); 
+    filesystem.cat("MARIA.txt");
+    filesystem.ls();
     std::cout << "\n";
 
+    filesystem.cat("test3.txt");
+    filesystem.cat("MARIA.txt");
+
+    filesystem.cp("MARIA.txt", "boober.txt"); 
+    filesystem.mv("MARIA.txt", "cool.txt"); 
+    filesystem.printer(2, buffer); 
+    filesystem.printer(3, buffer);
+    filesystem.printer(4, buffer);
+    filesystem.cat("test3.txt");
+
+    //result = (char*)buffer;
+
+    //std::cout << result << "\n";
+
+    //filesystem.cat("MARIA.txt");
+
+    //filesystem.cp("MARIA.txt", "boober.txt");
 
 
-    filesystem.disk.read(2, buffer);
+    //filesystem.cat("boober.txt");
+    //filesystem.ls();
+    //filesystem.printer(4, buffer); 
+    //filesystem.mv("MARIA.txt", "NILA.txt");
+    //filesystem.printer(2, buffer); 
 
-    result = (char*)buffer;
-
-    std::cout << result << "\n";
-
-    filesystem.cp("MARIA.txt", "boober.txt");
-    filesystem.mv("MARIA.txt", "NILA.txt");
-
-    
-    filesystem.disk.read(2, buffer); 
-    
-    result = (char*)buffer;
-
-    std::cout << result << "\n";
+    //filesystem.printer(4, buffer); 
 
     return;
 

@@ -56,6 +56,7 @@ private:
     int dirCount; 
 
     std::string DirParseAttr(std::string inputString);  
+    std::string addPadding(std::string filepath);  
     // size of a FAT entry is 2 bytes
 public:
     int16_t fat[BLOCK_SIZE/2];
@@ -68,6 +69,8 @@ public:
 
     int getBlock(std::string filename);
     int getFreeBlock(int blockBefore = -1);
+    void testArgs(uint8_t* buffer);
+
 
     int writeDirectoryEntry(dir_entry entry); 
     dir_entry* findDirectoryEntry(std::string filepath); 
@@ -76,8 +79,10 @@ public:
 
     void copyToDirEntries(dir_entry& entry, dir_entry other);
 
-  
+    void printer(int block, uint8_t* buffer);
 
+    void safeString(std::string& str);
+ 
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
     int create(std::string filepath);
