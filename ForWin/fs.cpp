@@ -77,7 +77,7 @@ int FS::writeDirectoryEntry(dir_entry entry)
         return BLOCK_FULL;
     }
     this->disk.write(ROOT_BLOCK, (uint8_t*)previousData.c_str());
-    
+    this->dirEntries[this->dirCount++] = entry; 
     return 0;
 }
 
@@ -85,11 +85,11 @@ dir_entry* FS::findDirectoryEntry(std::string filepath)
 {
     bool found = false;
     int index = 0;
-    while (!found && index < NUMBER_OF_BLOCKS) {
-        dir_entry entry = this->dirEntries[index++];
+    while (!found && index < DIR_ENTRY_SIZE) { 
+        dir_entry& entry = this->dirEntries[index++]; // Creates a reference
         std::string name = entry.file_name;  
-        if (filepath.compare(name)) {
-            return &entry;
+        if (filepath.compare(name) == 0) {
+            return &entry;  // if not for the first step we return reference to an object which no longer exists
         }
     }
     return nullptr;
@@ -166,8 +166,16 @@ FS::create(std::string filepath)
 
     uint8_t buffer[BLOCK_SIZE] = {};
 
-    strcpy((char *)buffer, (filepath + "\n").c_str());
-    position += (filepath + "\n").size();
+    std::string filenameInDisk = "";
+    int amountOfPadding = FILENAME_CHARS - filepath.size();
+    for (int i = 0; i < amountOfPadding; i++) {  
+        filenameInDisk += PLACE_HOLDER_CHAR;
+    }
+    filenameInDisk += filepath;  
+
+
+    strcpy((char *)buffer, (filenameInDisk + "\n").c_str()); 
+    position += (filenameInDisk + "\n").size();  
     totalSize += position;
 
     while(std::getline(std::cin, userInput) && userInput.size()){
@@ -185,10 +193,9 @@ FS::create(std::string filepath)
         lineCount++;
         position = totalSize; 
     }
-    disk.write(block, (uint8_t*)buffer);
+   
+    disk.write(block, (uint8_t*)buffer);   
     dir_entry newEntry((char*)filepath.c_str(), totalSize, firstBlock, 0, std::ios::in | std::ios::out);
-    this->copyToDirEntries(this->dirEntries[dirCount++], newEntry);
-
     this->writeDirectoryEntry(newEntry);
     
 
@@ -203,7 +210,7 @@ FS::cat(std::string filepath)
     int index = 0;
     while (index < DIR_ENTRY_SIZE) {
         dir_entry entry = this->dirEntries[index++];
-        std::string filename = entry.file_name;
+        std::string filename = entry.file_name; 
         if (filename.compare(filepath) == 0) {
             int block = entry.first_blk;
             while (block != FAT_EOF) {
@@ -238,12 +245,40 @@ FS::ls()
 }
 
 // cp <sourcepath> <destpath> makes an exact copy of the file
-// <sourcepath> to a new file <destpath>
+// DONT 
 int
 FS::cp(std::string sourcepath, std::string destpath)
 {
     std::cout << "FS::cp(" << sourcepath << "," << destpath << ")\n";
-    return 0;
+    dir_entry* source = this->findDirectoryEntry(sourcepath);
+    dir_entry* dest = this->findDirectoryEntry(destpath);
+    if (source == nullptr)
+        return FILE_NOT_FOUND;
+    if(dest != nullptr)
+        return FILE_EXISTS; 
+
+    dir_entry sourceEntry = *source;
+    dir_entry newEntry = sourceEntry;
+    
+    strcpy(newEntry.file_name, destpath.c_str());
+    int newBlock = this->getFreeBlock();
+    int sourceFatBlock = sourceEntry.first_blk; 
+    newEntry.first_blk = newBlock;
+    
+    uint8_t buffer[BLOCK_SIZE];
+    
+    while (sourceFatBlock != FAT_EOF) { 
+        this->disk.read(sourceFatBlock, buffer);
+        std::string content = (char*)buffer; 
+        content = content.substr(content.find("\n") + 1);
+        this->disk.write(newBlock, (uint8_t*)content.c_str()); 
+        sourceFatBlock = this->fat[sourceFatBlock];
+        if(sourceFatBlock != FAT_EOF)  
+            newBlock = this->getFreeBlock(newBlock); 
+    }
+
+    this->writeDirectoryEntry(newEntry);
+    return 0; 
 }
 
 // mv <sourcepath> <destpath> renames the file <sourcepath> to the name <destpath>,
@@ -252,6 +287,36 @@ int
 FS::mv(std::string sourcepath, std::string destpath)
 {
     std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
+    dir_entry* destinationEntryPtr = this->findDirectoryEntry(destpath);
+    dir_entry* sourceEntryPtr = this->findDirectoryEntry(sourcepath); 
+    if (destinationEntryPtr != nullptr) { 
+        return FILE_EXISTS; 
+    }
+    if (sourceEntryPtr == nullptr){
+        return FILE_NOT_FOUND; 
+    }
+    
+    dir_entry& sourceEntry = *sourceEntryPtr; 
+
+    uint8_t buffer[BLOCK_SIZE]; 
+    this->disk.read(sourceEntry.first_blk, buffer);
+    std::string firstBlockContent = (char*)buffer;
+
+    firstBlockContent = firstBlockContent.substr(firstBlockContent.find("\n"));
+    
+    std::string filenameInDisk = ""; 
+    int amountOfPadding = FILENAME_CHARS - destpath.size();   
+    for (int i = 0; i < amountOfPadding; i++) {  
+        filenameInDisk += PLACE_HOLDER_CHAR; 
+    }
+    filenameInDisk += destpath;
+
+    std::string newFirstBlockContent = filenameInDisk + firstBlockContent; 
+    this->disk.write(sourceEntry.first_blk, (uint8_t*)newFirstBlockContent.c_str());   
+    
+    strcpy(sourceEntry.file_name, destpath.c_str()); 
+    
+
     return 0;
 }
 

@@ -93,6 +93,21 @@ Shell::run()
 
 
 
+    filesystem.disk.read(2, buffer);
+
+    result = (char*)buffer;
+
+    std::cout << result << "\n";
+
+    filesystem.cp("MARIA.txt", "boober.txt");
+    filesystem.mv("MARIA.txt", "NILA.txt");
+
+    
+    filesystem.disk.read(2, buffer); 
+    
+    result = (char*)buffer;
+
+    std::cout << result << "\n";
 
     return;
 

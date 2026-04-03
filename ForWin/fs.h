@@ -76,6 +76,8 @@ public:
 
     void copyToDirEntries(dir_entry& entry, dir_entry other);
 
+  
+
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
     int create(std::string filepath);
