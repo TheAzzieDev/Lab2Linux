@@ -81,13 +81,71 @@ Shell::run()
     }
     else
         std::cout << "SUCCESS: FORMAT IS WORKING!!! " << std::endl;
-
+    uint8_t buffer[BLOCK_SIZE];  
 
     std::cout << "Running create! " << std::endl;
-    filesystem.create("MARIA.txt");
-    filesystem.create("test3.txt");
 
-    uint8_t buffer[BLOCK_SIZE];
+    //WORKING FINE WITH MY TEST = ACCORDING WHAT I THINK IS RIGHT
+
+    //CREATE IS FINE TO MY TESTS
+    filesystem.create("MARIA.txt");
+    filesystem.create("test3.txt"); 
+    filesystem.printer(2); 
+
+    //CAT IS WORKING WITH MY TESTS
+    //filesystem.cat("MARIA.txt");
+    std::cout << "\n";
+
+    //LS IS WORKING WITH MY TESTS
+    filesystem.ls();
+
+
+    //CP IS WORKING WITH MY TESTS
+    filesystem.cp("MARIA.txt", "heyThere.txt");
+
+    //filesystem.cat("heyThere.txt");
+    //filesystem.printer((filesystem.findDirectoryEntry("MARIA.txt"))->first_blk);  
+    filesystem.printer((filesystem.findDirectoryEntry("heyThere.txt"))->first_blk);       
+
+    //MV IS WORKING WITH MY TESTS
+    filesystem.mv("MARIA.txt", "NewFile.txt");
+    filesystem.printer(2); 
+    filesystem.ls(); 
+
+
+    //rm + MAX entries now implemented IS WORKING WITH MY TESTS
+    filesystem.rm("NewFile.txt");
+    filesystem.printer(2);
+    filesystem.printer(3);
+    filesystem.ls();
+
+    filesystem.cat("test3.txt");
+
+
+    //APPEND IS WORKING WITH MY TEST
+    filesystem.create("append.txt");
+    filesystem.append("test3.txt", "append.txt");
+    filesystem.cat("append.txt");
+
+    filesystem.printer((filesystem.findDirectoryEntry("append.txt"))->first_blk);  
+
+
+   /* for (int i = 0; i < 64; i++) {
+        int status = filesystem.create("testOf" + std::to_string(i) + ".txt");
+        if (status == NO_VALID_INDEX) {
+            std::cout << "NOVALIDINDEX";
+        }
+           
+    }
+
+    int status = filesystem.cp("testOf" + std::to_string(62) + ".txt", "new.txt");
+    if (status == NO_VALID_INDEX) {
+        std::cout << "NOVALIDINDEX________AGAIN";
+    }*/
+
+
+
+ /*  
     filesystem.disk.read(3, buffer);
     std::string result = (char*)buffer;
     std::cout << "result: " << result << "\n";
@@ -105,8 +163,47 @@ Shell::run()
     filesystem.printer(2, buffer); 
     filesystem.printer(3, buffer);
     filesystem.printer(4, buffer);
-    filesystem.cat("test3.txt");
+    filesystem.cat("test3.txt");*/
 
+    //create test
+    //std::string userInput = "NONE";
+
+    //int totalSize = 0;
+    //int block = filesystem.getFreeBlock(); 
+    //int firstBlock = block;
+
+    //for (int i = 0; i < BLOCK_SIZE; i++) {
+    //    buffer[i] = '\0';
+    //}
+    //
+    //std::string filenameInDisk = filesystem.addPadding("test.txt") + "\n";
+
+
+    //
+    //totalSize += filenameInDisk.size();
+    //std::string toAddString = "";
+
+    //toAddString += filenameInDisk; 
+    //for (int i = 0; i < BLOCK_SIZE - 9; i++) {
+    //    toAddString += "A";
+    //}
+    //while (std::getline(std::cin, userInput) && userInput.size()) {
+    //    totalSize += toAddString.size(); 
+    //    toAddString += userInput;
+    //    if (totalSize > BLOCK_SIZE) {
+    //        std::string toWrite = toAddString.substr(0, BLOCK_SIZE);
+    //        filesystem.disk.write(block, (uint8_t* )toWrite.c_str());     
+    //        block = filesystem.getFreeBlock(block); 
+    //        toAddString = toAddString.substr(BLOCK_SIZE); 
+    //        totalSize = toAddString.size();  
+    //    }
+    //}
+
+    //filesystem.safeString(toAddString);
+    //filesystem.disk.write(block, (uint8_t*)toAddString.c_str());   
+    //
+    //filesystem.printer(5, buffer); 
+    //filesystem.printer(6, buffer);  
     //result = (char*)buffer;
 
     //std::cout << result << "\n";

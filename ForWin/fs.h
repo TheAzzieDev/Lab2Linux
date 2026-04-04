@@ -13,6 +13,8 @@
 #define FILE_EXISTS 304
 #define FILE_NOT_FOUND 404
 #define BLOCK_FULL 413 
+#define FILENAME_TOO_LARGE 413
+#define NO_VALID_INDEX -1 
 
 #define DIR_ENTRY_SIZE 64
 #define AMOUNT_OF_DIRS 64
@@ -55,13 +57,13 @@ class FS {
 private:
     int dirCount; 
 
-    std::string DirParseAttr(std::string inputString);  
-    std::string addPadding(std::string filepath);  
+    std::string DirParseAttr(std::string inputString);    
     // size of a FAT entry is 2 bytes
 public:
+    std::string addPadding(std::string filepath); 
     int16_t fat[BLOCK_SIZE/2];
     Disk disk; 
-    dir_entry dirEntries[NUMBER_OF_BLOCKS / sizeof(dir_entry)]{};
+    dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};  
     FS();
     ~FS();
     // formats the disk, i.e., creates an empty file system
@@ -74,12 +76,10 @@ public:
 
     int writeDirectoryEntry(dir_entry entry); 
     dir_entry* findDirectoryEntry(std::string filepath); 
+    int getFreeDirEntryIndex();
 
     void loadDirectory(); 
-
-    void copyToDirEntries(dir_entry& entry, dir_entry other);
-
-    void printer(int block, uint8_t* buffer);
+    void printer(int block);
 
     void safeString(std::string& str);
  
