@@ -1,0 +1,30 @@
+{
+    "makefile.configurations": [
+        {
+            "name": "DefaultConfig", 
+            "makeArgs": ["CFLAGS+=-DDebugOn"],
+            "problemMatchers": [
+                "$gcc",
+                "$msvc"
+            ]
+        }
+
+    ],
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "{workspaceFolder}",
+            "binaryPath": "{workspaceFolder}filesystem",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "{workspaceFolder}",
+            "binaryPath": "{workspaceFolder}/MyTest",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/MyTest",
+            "binaryArgs": []
+        }
+    ]
+}
