@@ -82,7 +82,13 @@ Shell::run()
     std::cout << "Testing cp(f1,f2)..." << std::endl;
     arg1 = "f1";
     arg2 = "f2";
-    ret_val = filesystem.cp(arg1,arg2);
+    ret_val = filesystem.cp(arg1, arg2);
+    filesystem.ls();
+    //filesystem.cat(arg1);
+    filesystem.cat(arg2);
+
+
+
     if (ret_val) 
         std::cout << "Error: cp(" << arg1 << "," << arg2 << ") failed, error code " << ret_val << std::endl;
     // check that there exists a copy with the same size

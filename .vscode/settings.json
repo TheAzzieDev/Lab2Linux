@@ -25,6 +25,16 @@
             "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
             "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/MyTest",
             "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test1",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test2",
+            "binaryArgs": []
         }
     ]
 }

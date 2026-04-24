@@ -50,6 +50,9 @@ Shell::~Shell()
 void
 Shell::run()
 {
+    for(int i = 0; i < -1; i++){
+        std::cout << "test" << "\n";
+    }
     std::string cmd, arg1, arg2;
     int ret_val = 0;
     int fd[2];
@@ -70,6 +73,10 @@ Shell::run()
     if (ret_val) {
         std::cout << "Error: format failed, error code " << ret_val << std::endl;
     }
+
+
+    ret_val = filesystem.create("coool");
+    filesystem.printer(2);
     // check that the disk is empty
     std::cout << "Executing ls" << std::endl;
     std::cout << "Expected output:" << std::endl;
@@ -99,6 +106,11 @@ Shell::run()
         std::cout << "Error: create " << arg1;
         std::cout << " failed, error code " << ret_val << std::endl;
     }
+    filesystem.printer(4);
+
+
+    
+
     // check that the file is there
     std::cout << "Expected output:" << std::endl;
     std::cout << "name\t size" << std::endl;
@@ -115,6 +127,11 @@ Shell::run()
     fw = open("input3.txt", O_RDONLY);
     dup2(fw,0);
     ret_val = filesystem.create(arg1);
+    filesystem.printer(3);
+    filesystem.printer(4);
+    filesystem.printer(5);
+    return;
+
     if (ret_val) {
         std::cout << "Error: create " << arg1;
         std::cout << " failed, error code " << ret_val << std::endl;

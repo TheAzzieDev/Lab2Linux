@@ -40,6 +40,9 @@ struct dir_entry {
     uint8_t access_rights; // read (0x04), write (0x02), execute (0x01)
 
 
+
+
+
     dir_entry(char* file_name, uint32_t size, 
     uint16_t first_blk,
     uint8_t type,
@@ -47,6 +50,7 @@ struct dir_entry {
 
     dir_entry(); 
     dir_entry& operator=(const dir_entry& other);
+    void safeFileName(std::string filename = "");
 
 
     std::string serializeEntry(); 
@@ -64,6 +68,8 @@ public:
     int16_t fat[BLOCK_SIZE/2];
     Disk disk; 
     dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};  
+    dir_entry currentDir;
+
     FS();
     ~FS();
     // formats the disk, i.e., creates an empty file system
@@ -117,4 +123,4 @@ public:
     int chmod(std::string accessrights, std::string filepath);
 };
 
-#endif // __FS_H__
+#endif

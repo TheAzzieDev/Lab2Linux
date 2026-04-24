@@ -40,6 +40,51 @@
             }
             ],
 
-        }
+        },
+
+
+
+        {
+            "name": "Debug test1",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test1",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb", 
+            "setupCommands": [
+            {
+                "text": "-enable-pretty-printing\nskip -gfi /usr/include/c++/*/*/*\nskip -gfi /usr/include/c++/*/*\nskip -gfi /usr/include/c++/*",
+                "ignoreFailures": true
+            }
+                ],
+
+        },
+
+        {
+            "name": "Debug test2",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test2",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb", 
+            "setupCommands": [
+            {
+                "text": "-enable-pretty-printing\nskip -gfi /usr/include/c++/*/*/*\nskip -gfi /usr/include/c++/*/*\nskip -gfi /usr/include/c++/*",
+                "ignoreFailures": true
+            }
+                ],
+
+        },
+        
     ]
 }

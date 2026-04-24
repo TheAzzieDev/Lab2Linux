@@ -6,6 +6,8 @@
 #include <fstream>
 #include <string>
 #include <stdio.h>
+#include <ios>
+#include <limits>
 #include "fs.h"
 
 std::string FS::DirParseAttr(std::string inputString) 
@@ -24,9 +26,10 @@ std::string FS::DirParseAttr(std::string inputString)
 
 FS::FS(){
     std::cout << "FS::FS()... Creating file system\n";
+    this->dirCount = 0;
     this->format(); 
     this->loadDirectory();
-    this->dirCount = 0;
+    
 }
 
 FS::~FS()
@@ -159,6 +162,10 @@ void FS::loadDirectory()
 
         bufferResult = bufferResult.substr(DIR_ENTRY_SIZE); 
     }
+    // if (this->dirCount == 0) {
+    //     dir_entry root = dir_entry("/", 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+    //     this->writeDirectoryEntry(root);
+    // }
 }
 
 void FS::printer(int block) {
@@ -189,7 +196,7 @@ void FS::safeString(std::string& str)
 std::string FS::addPadding(std::string filepath) 
 {
     std::string filenameInDisk = "";
-    int amountOfPadding = FILENAME_CHARS - filepath.size();
+    int amountOfPadding = FILENAME_CHARS - (filepath.size() + 1);
     for (int i = 0; i < amountOfPadding; i++) {
         filenameInDisk += PLACE_HOLDER_CHAR;
     }
@@ -242,15 +249,16 @@ FS::create(std::string filepath)
     std::string toAddString = "";
 
     toAddString += filenameInDisk;  
-    //for (int i = 0; i < BLOCK_SIZE; i++) {   
-    //    toAddString += "A";
-    //}
-    //currentSize = toAddString.size();  
+    // // for (int i = 0; i < BLOCK_SIZE; i++) {   
+    // //    toAddString += "A";
+    // // }
+    // // currentSize = toAddString.size();  
     int totalSizeOfFile = 0;  
-    while (std::getline(std::cin, userInput) && userInput.size()) {
+    while (std::getline(std::cin, userInput) && userInput.size() && !userInput.empty()) {
+        int previousSize = currentSize;
         currentSize += userInput.size();
-        totalSizeOfFile += currentSize;  
         toAddString += userInput;
+        totalSizeOfFile += currentSize - previousSize;
         while (currentSize > BLOCK_SIZE) { 
             std::string toWrite = toAddString.substr(0, BLOCK_SIZE);
             this->disk.write(block, (uint8_t*)toWrite.c_str());
@@ -263,9 +271,12 @@ FS::create(std::string filepath)
     this->safeString(toAddString);
     this->disk.write(block, (uint8_t*)toAddString.c_str());   
 
-    dir_entry newEntry((char*)filepath.c_str(), totalSizeOfFile, firstBlock, 0, std::ios::in | std::ios::out); 
+    dir_entry newEntry((char*)filepath.c_str(), totalSizeOfFile, firstBlock, TYPE_FILE, std::ios::in | std::ios::out);  
     this->writeDirectoryEntry(newEntry);
-    
+
+    std::cout << "File created successfully!\n";
+    std::cin.clear();
+    std::cin.sync();
     return 0;
 }
 
@@ -341,7 +352,13 @@ FS::cp(std::string sourcepath, std::string destpath)
     dir_entry sourceEntry = *source;
     dir_entry newEntry = sourceEntry;
     
-    strcpy(newEntry.file_name, destpath.c_str());
+    memset(newEntry.file_name, 0, sizeof(newEntry.file_name));
+    strncpy(
+        newEntry.file_name,
+        destpath.c_str(),
+        sizeof(newEntry.file_name)-1
+    );
+
     int newBlock = this->getFreeBlock();
     int sourceFatBlock = sourceEntry.first_blk; 
     newEntry.first_blk = newBlock;
@@ -408,8 +425,12 @@ FS::mv(std::string sourcepath, std::string destpath)
     std::string newFirstBlockContent = filenameInDisk + firstBlockContent;  
     this->disk.write(sourceEntry.first_blk, (uint8_t*)newFirstBlockContent.c_str());   
     
-    strcpy(sourceEntry.file_name, destpath.c_str()); 
-    
+    memset(sourceEntry.file_name, 0, sizeof(sourceEntry.file_name));
+    strncpy(
+        sourceEntry.file_name,
+        destpath.c_str(),
+        sizeof(sourceEntry.file_name)-1
+    );
 
     return 0;
 }
@@ -551,7 +572,15 @@ FS::chmod(std::string accessrights, std::string filepath)
 //Might be a potentiall problem becuase c strings are null terminated!!!!!!
 dir_entry::dir_entry(char* file_name, uint32_t size, uint16_t first_blk, uint8_t type, uint8_t access_rights)
 {
-    std::strcpy(this->file_name, file_name);
+    memset(this->file_name, 0, sizeof(this->file_name));
+    strncpy(
+        this->file_name,
+        file_name,
+        sizeof(this->file_name)-1
+    );
+
+
+    std::cout << "CREATING ENTRY WITH NAME: " << this->file_name << "\n";
     this->size = size;
     this->first_blk = first_blk;
     this->type = type;
@@ -560,7 +589,14 @@ dir_entry::dir_entry(char* file_name, uint32_t size, uint16_t first_blk, uint8_t
 
 dir_entry::dir_entry() 
 {
-    std::strcpy(this->file_name, ""); 
+    std::string filenameStr = "";
+    memset(this->file_name, 0, sizeof(this->file_name));
+    strncpy(
+        this->file_name,
+        filenameStr.c_str(),
+        sizeof(this->file_name)-1
+    );
+
     this->size = 0;
     this->first_blk = 0; 
     this->type = 0; 
@@ -570,9 +606,12 @@ dir_entry::dir_entry()
 dir_entry& dir_entry::operator=(const dir_entry& other)
 {
     // TODO: insert return statement here 
-    for (int i = 0; i < FILENAME_CHARS; i++) {
-        this->file_name[i] = other.file_name[i];
-    }
+    memset(this->file_name, 0, sizeof(this->file_name));
+    strncpy(
+        this->file_name,
+        other.file_name,
+        sizeof(other.file_name)-1
+    );
     this->size = other.size;
     this->first_blk = other.first_blk;
     this->type = other.type;
@@ -580,12 +619,21 @@ dir_entry& dir_entry::operator=(const dir_entry& other)
     return *this;
 }
 
+void dir_entry::safeFileName(std::string filename)
+{
+    memset(this->file_name, 0, sizeof(this->file_name));
+    strncpy(
+        this->file_name,
+        filename.c_str(),
+        sizeof(this->file_name)-1
+    );
+}
 
 //FORMAT name-size-
 std::string dir_entry::serializeEntry()
 {
     std::string toReturn = "";
-    std::string filenameString = (char*)this->file_name;
+    std::string filenameString = this->file_name;
     std::string placeHolder = PLACE_HOLDER_CHAR; 
     int charsCap = (sizeof(this->file_name) / sizeof(char));  
 
@@ -595,15 +643,16 @@ std::string dir_entry::serializeEntry()
 
     std::string sizeString = std::to_string(this->size); 
     int sizeOfSizeString = sizeString.size();
-
-    for (int i = 0; i < sizeof(this->size) - sizeOfSizeString; i++)
+    int maxChars = sizeof(this->size);
+    for (int i = 0; i < maxChars - sizeOfSizeString; i++)
         toReturn += placeHolder; 
     toReturn += sizeString; 
 
     std::string blkString = std::to_string(this->first_blk);  
-    int sizeOfBlkString = blkString.size();   
+    int sizeOfBlkString = blkString.size(); 
+    int maxBlkChars = sizeof(this->first_blk);  
 
-    for (int i = 0; i < sizeof(this->first_blk) - sizeOfBlkString; i++) 
+    for (int i = 0; i < maxBlkChars - sizeOfBlkString; i++) 
         toReturn += placeHolder;   
     toReturn += blkString; 
     toReturn += std::to_string(this->type) + std::to_string(this->access_rights);
