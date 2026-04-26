@@ -50,9 +50,13 @@ Shell::~Shell()
 void
 Shell::run()
 {
+
+    filesystem.mkdir("testdir");
+    
     for(int i = 0; i < -1; i++){
         std::cout << "test" << "\n";
     }
+    return;
     std::string cmd, arg1, arg2;
     int ret_val = 0;
     int fd[2];

@@ -15,7 +15,10 @@
 #define BLOCK_FULL 413 
 #define FILENAME_TOO_LARGE 413
 #define NO_VALID_INDEX -1 
-
+#define ENTRY_IS_DIR 415
+#define ENTRY_CANNOT_DELETED 405
+#define DIR_SELF 0
+#define DIR_PARENT 1
 #define DIR_ENTRY_SIZE 64
 #define AMOUNT_OF_DIRS 64
 #define PLACE_HOLDER_CHAR "?"
@@ -36,12 +39,9 @@ struct dir_entry {
     char file_name[56]; // name of the file / sub-directory
     uint32_t size; // size of the file in bytes
     uint16_t first_blk; // index in the FAT for the first block of the file
+
     uint8_t type; // directory (1) or file (0)
     uint8_t access_rights; // read (0x04), write (0x02), execute (0x01)
-
-
-
-
 
     dir_entry(char* file_name, uint32_t size, 
     uint16_t first_blk,
@@ -61,14 +61,15 @@ class FS {
 private:
     int dirCount; 
 
-    std::string DirParseAttr(std::string inputString);    
+    std::string dirParseAttr(std::string inputString);    
     // size of a FAT entry is 2 bytes
 public:
     std::string addPadding(std::string filepath); 
+
     int16_t fat[BLOCK_SIZE/2];
     Disk disk; 
     dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};  
-    dir_entry currentDir;
+    dir_entry currentWorkingDir;
 
     FS();
     ~FS();
@@ -80,14 +81,19 @@ public:
     void testArgs(uint8_t* buffer);
 
 
-    int writeDirectoryEntry(dir_entry entry); 
+    int writeDirectoryEntry(dir_entry entry, bool dontAddEntry = false); 
     dir_entry* findDirectoryEntry(std::string filepath); 
     int getFreeDirEntryIndex();
+    int getDirIndex(std::string path);
 
     void loadDirectory(); 
-    void printer(int block);
+    void loadNewDirectory();
+    void deserializeEntries(int block);
 
+    void printer(int block);
+    
     void safeString(std::string& str);
+    
  
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
@@ -113,7 +119,7 @@ public:
     // in the current directory
     int mkdir(std::string dirpath);
     // cd <dirpath> changes the current (working) directory to the directory named <dirpath>
-    int cd(std::string dirpath);
+    int cd(std::string dirpath, bool muteCall = false);
     // pwd prints the full path, i.e., from the root directory, to the current
     // directory, including the current directory name
     int pwd();

@@ -50,6 +50,51 @@ Shell::~Shell()
 void
 Shell::run()
 {
+
+    filesystem.mkdir("testdir");
+    filesystem.create("test.txt");
+
+    filesystem.pwd();
+    uint8_t buffer[BLOCK_SIZE];
+    filesystem.disk.read(2, buffer);
+
+    //filesystem.cp("test.txt", "testdir");
+    
+
+    filesystem.cd("testdir");
+    filesystem.disk.read(0, buffer);
+    filesystem.cd("..");
+    filesystem.mv("test.txt", "testdir");
+    filesystem.disk.read(2, buffer);
+    filesystem.disk.read(0, buffer);
+    filesystem.cd("testdir");
+    filesystem.cat("test.txt");
+    filesystem.cat("testdir");
+    filesystem.cd("..");
+    filesystem.mkdir("testdir2");
+    filesystem.ls();
+    int result = filesystem.rm("testdir2");
+    filesystem.ls();
+
+    filesystem.create("first.txt");
+    filesystem.create("second.txt");
+    filesystem.append("first.txt", "second.txt");
+    filesystem.printer(filesystem.findDirectoryEntry("second.txt")->first_blk);
+    
+    // filesystem.mkdir("testdir2");
+    // filesystem.disk.read(2, buffer);
+    // filesystem.disk.read(0, buffer);
+    // filesystem.cd("testdir2");
+    // filesystem.pwd();
+
+    // filesystem.cd("..");
+    // filesystem.pwd();
+    for(int i = 0; i < 10; i++){
+        std::cout << "test" << "\n";
+    }
+
+    return;
+  
     std::string cmd, arg1, arg2;
     int ret_val = 0;
     int fd[2];
@@ -86,6 +131,7 @@ Shell::run()
     filesystem.ls();
     //filesystem.cat(arg1);
     filesystem.cat(arg2);
+
 
 
 
