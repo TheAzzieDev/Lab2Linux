@@ -68,18 +68,39 @@ Shell::run()
     filesystem.disk.read(2, buffer);
     filesystem.disk.read(0, buffer);
     filesystem.cd("testdir");
+    filesystem.mkdir("omg");
     filesystem.cat("test.txt");
     filesystem.cat("testdir");
     filesystem.cd("..");
     filesystem.mkdir("testdir2");
+    filesystem.cd("testdir2");
     filesystem.ls();
-    int result = filesystem.rm("testdir2");
-    filesystem.ls();
+    std::unique_ptr<std::tuple<std::string, int>> result = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
+    std::unique_ptr<std::tuple<std::string, int>> result2 = filesystem.parsePath("//testdir/../../testdir/omg/thing.txt");
+    filesystem.cd("..");
+    std::unique_ptr<std::tuple<std::string, int>> result3 = filesystem.parsePath("/testdir2");
+    std::unique_ptr<std::tuple<std::string, int>> result4 = filesystem.parsePath("/testdir/..//../testdir/omg/thing.txt");
+    std::unique_ptr<std::tuple<std::string, int>> result5 = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
+    if(result == nullptr && result2 == nullptr && result3 != nullptr && result4 == nullptr && result5 != nullptr)
+        std::cout << "TEST IS WORKING!!!" << "\n"; 
+    
+    filesystem.cd("/");
+    filesystem.cd("testdir/omg");
+    filesystem.cat("/testdir/test.txt");
 
-    filesystem.create("first.txt");
-    filesystem.create("second.txt");
-    filesystem.append("first.txt", "second.txt");
-    filesystem.printer(filesystem.findDirectoryEntry("second.txt")->first_blk);
+    filesystem.create("/testdir/omg/whatisthis.txt");
+    filesystem.cat("/testdir/omg/whatisthis.txt");
+
+
+    //std::cout << "RESULT: " << std::get<0>(anotherRes) << " BLOCK: " << std::to_string(std::get<1>(anotherRes));
+
+    // int result = filesystem.rm("testdir2");
+    // filesystem.ls();
+
+    // filesystem.create("first.txt");
+    // filesystem.create("second.txt");
+    // filesystem.append("first.txt", "second.txt");
+    // filesystem.printer(filesystem.findDirectoryEntry("second.txt")->first_blk);
     
     // filesystem.mkdir("testdir2");
     // filesystem.disk.read(2, buffer);
@@ -89,6 +110,9 @@ Shell::run()
 
     // filesystem.cd("..");
     // filesystem.pwd();
+
+    //filesystem.mkdir("/testdir/whatitworks");
+    //filesystem.cd("/testdir/whatitworks");
     for(int i = 0; i < 10; i++){
         std::cout << "test" << "\n";
     }

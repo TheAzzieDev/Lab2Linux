@@ -1,5 +1,8 @@
 #include <iostream>
 #include <cstdint>
+#include <tuple>
+#include <memory>
+#include <vector>
 #include "disk.h"
 
 #ifndef __FS_H__
@@ -27,6 +30,7 @@
 #define FIRST_BLK_CHARS 2
 #define TYPE_CHARS 1
 #define ACCESS_RIGHTS_CHARS 1
+#define WRONG_PATH_FORMAT 406
 
 
 #define TYPE_FILE 0
@@ -62,6 +66,8 @@ private:
     int dirCount; 
 
     std::string dirParseAttr(std::string inputString);    
+    void backtrack(std::vector<std::string> visitedDirectories);
+    int cdHelper(std::string dirpath);
     // size of a FAT entry is 2 bytes
 public:
     std::string addPadding(std::string filepath); 
@@ -89,11 +95,12 @@ public:
     void loadDirectory(); 
     void loadNewDirectory();
     void deserializeEntries(int block);
+    
 
     void printer(int block);
     
     void safeString(std::string& str);
-    
+    std::unique_ptr<std::tuple<std::string, int>> parsePath(std::string path);
  
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)

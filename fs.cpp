@@ -8,9 +8,26 @@
 #include <stdio.h>
 #include <ios>
 #include <limits>
-#include <vector>
 
 #include "fs.h"
+
+
+
+/*
+TASK4 FUNCTIONS TO FIX PATH FOR!!!!!
+- CREATE XXXXXXXXXX
+- CAT XXXXXXXXXXXX
+- MV
+- CP
+- RM
+- APPEND
+- MKDIR XXXXXXXXX
+- CD XXXXXXXXXXXX
+
+
+*/
+
+
 
 std::string FS::dirParseAttr(std::string inputString)
 {
@@ -26,6 +43,39 @@ std::string FS::dirParseAttr(std::string inputString)
             return inputString;
     }
     return "";
+}
+
+void FS::backtrack(std::vector<std::string> visitedDirectories)
+{
+    while(std::string("/").compare(this->currentWorkingDir.file_name) != 0){
+        this->cdHelper("..");
+    }
+    for(int i = visitedDirectories.size() - 1; i >= 0 ; i--){
+        std::string directory = visitedDirectories.at(i);
+        this->cdHelper(directory);
+    }
+}
+
+int FS::cdHelper(std::string dirpath)
+{
+    dir_entry* entry = this->findDirectoryEntry(dirpath); 
+    
+    if(dirpath.compare("..") == 0){
+        
+       this->currentWorkingDir = this->dirEntries[DIR_PARENT];
+       this->loadNewDirectory();
+       this->currentWorkingDir = this->dirEntries[DIR_SELF]; 
+    }
+    
+    if (entry == nullptr)
+    {
+        return FILE_NOT_FOUND;
+    }
+    else if(dirpath.compare("..") != 0){
+        this->currentWorkingDir = *entry; 
+        this->loadNewDirectory();
+    }
+    return 0;
 }
 
 FS::FS()
@@ -172,8 +222,12 @@ void FS::loadDirectory() {
     this->deserializeEntries(ROOT_BLOCK);
     if (this->dirCount == 0) {
         std::string filename = "/";
+        std::string parentFilename = "..";
         dir_entry root = dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+        dir_entry parent = dir_entry((char*)parentFilename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+  
         this->writeDirectoryEntry(root);
+        this->writeDirectoryEntry(parent);
     }
     this->currentWorkingDir = this->dirEntries[0];
 }
@@ -242,6 +296,58 @@ void FS::safeString(std::string &str)
         str += '\0';
 }
 
+std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
+{
+    bool condition = true;
+    int count = 0;
+    std::vector<std::string> visitedDirectories;
+    std::string previousDirName = this->currentWorkingDir.file_name;
+
+    if(path.compare("/") == 0)
+        return std::unique_ptr<std::tuple<std::string, int>>(new std::tuple<std::string, int> (path, ROOT_BLOCK));
+
+    if(std::string(1, path.at(0)).compare("/") == 0 && std::string(1, path.at(1)).compare("/") == 0)
+        return nullptr;
+
+    if(std::string(1, path.at(0)).compare("/") == 0){
+        while(std::string(this->currentWorkingDir.file_name).compare("/") != 0) {
+            visitedDirectories.push_back(this->currentWorkingDir.file_name);
+            this->cdHelper("..");
+        }
+        path = path.substr(1);
+    }
+
+    while (condition) {
+        int slashIndex = path.find("/");
+
+        std::string dirPath = "";
+        if (slashIndex == std::string::npos){
+            condition = false;
+        }
+        else{
+            int slashIndexNext = slashIndex + 1;
+            if(std::string(1, path.at(slashIndexNext)).compare("/") == 0){
+                this->backtrack(visitedDirectories);
+                return nullptr;
+            }
+                
+            dirPath = path.substr(0, slashIndex);
+            dir_entry *entry = this->findDirectoryEntry(dirPath);
+            if(entry == nullptr){
+                this->backtrack(visitedDirectories);
+                return nullptr;
+            }
+            path = path.substr(slashIndexNext);
+            this->cdHelper(dirPath);
+        }
+
+    }
+
+    int parentBlock = this->currentWorkingDir.first_blk;
+    this->backtrack(visitedDirectories);
+    return std::unique_ptr<std::tuple<std::string, int>>(new std::tuple<std::string, int> (path, parentBlock));
+}
+
 std::string FS::addPadding(std::string filepath)
 {
     std::string filenameInDisk = "";
@@ -279,6 +385,14 @@ int FS::getBlock(std::string filename)
 int FS::create(std::string filepath)
 {
     std::cout << "FS::create(" << filepath << ")\n";
+    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(filepath);
+    if(parsedPathPtr == nullptr)
+        return WRONG_PATH_FORMAT;
+
+    dir_entry dirBefore = this->currentWorkingDir;
+    this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
+    this->loadNewDirectory();
+    filepath = std::get<0>(*parsedPathPtr);
 
     if (this->getBlock(filepath))
         return FILE_EXISTS;
@@ -325,6 +439,8 @@ int FS::create(std::string filepath)
 
     dir_entry newEntry((char *)filepath.c_str(), totalSizeOfFile, firstBlock, TYPE_FILE, 1);
     this->writeDirectoryEntry(newEntry);
+    this->currentWorkingDir = dirBefore;
+    this->loadNewDirectory();
 
     std::cout << "File created successfully!\n";
     std::cin.clear();
@@ -336,6 +452,14 @@ int FS::create(std::string filepath)
 int FS::cat(std::string filepath)
 {
     std::cout << "FS::cat(" << filepath << ")\n";
+    std::unique_ptr<std::tuple<std::string, int>> dirParsed = this->parsePath(filepath);
+    if(dirParsed == nullptr)
+        return WRONG_PATH_FORMAT;
+    dir_entry dirBefore = this->currentWorkingDir;
+    this->currentWorkingDir.first_blk = std::get<1>(*dirParsed);
+    this->loadNewDirectory();
+    filepath = std::get<0>(*dirParsed);
+
     dir_entry* entry = this->findDirectoryEntry(filepath);
     if(entry == nullptr)
         return FILE_NOT_FOUND;
@@ -372,7 +496,8 @@ int FS::cat(std::string filepath)
             return 0;
         }
     }
-
+    this->currentWorkingDir = dirBefore;
+    this->loadNewDirectory();
     return FILE_NOT_FOUND;
 }
 
@@ -398,14 +523,17 @@ int FS::ls()
         else
             type = "dir";
         if (filename.compare("") != 0){
-            if(filename.compare(this->currentWorkingDir.file_name) == 0)
-                filename = ".";
-            int spaceFile = FILENAME_CHARS - filename.size();
-            std::string result = filename;
-            for(int i = 0; i < spaceFile; i++){
-                filename += " ";
-            }   
-            std::cout << filename << type << "\t" << size << "\n";
+            if(filename.compare(this->currentWorkingDir.file_name) != 0 && 
+            filename.compare("..") != 0)
+            {
+                int spaceFile = FILENAME_CHARS - filename.size();
+                std::string result = filename;
+                for(int i = 0; i < spaceFile; i++){
+                    filename += " ";
+                }   
+                std::cout << filename << type << "\t" << size << "\n";
+            }
+    
         }
            
     }
@@ -499,6 +627,13 @@ int FS::cp(std::string sourcepath, std::string destpath)
 int FS::mv(std::string sourcepath, std::string destpath)
 {
     std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
+
+    std::unique_ptr<std::tuple<std::string, int>> sourcepathPtr = this->parsePath(sourcepath);
+    std::unique_ptr<std::tuple<std::string, int>> destpathPtr = this->parsePath(destpath);
+    if(sourcepathPtr == nullptr || destpathPtr == nullptr){
+        return WRONG_PATH_FORMAT;
+    }
+
     dir_entry * destinationEntryPtr = this->findDirectoryEntry(destpath);
     dir_entry * sourceEntryPtr = this->findDirectoryEntry(sourcepath);
     if (destinationEntryPtr != nullptr && destinationEntryPtr->type != TYPE_DIR)
@@ -586,7 +721,7 @@ int FS::rm(std::string filepath)
         std::string serializedFile = bufferString.substr(index, DIR_ENTRY_SIZE - 1);
         std::string serializedBlock = serializedFile.substr(FILENAME_CHARS + SIZE_CHARS - 1, FIRST_BLK_CHARS).c_str();
         int block = atoi((this->dirParseAttr(serializedBlock)).c_str());
-        
+
         this->disk.read(block, buffer); 
         std::string testOfFile = (char*)buffer;
         if(testOfFile.size() > DIR_ENTRY_SIZE*2)
@@ -699,16 +834,24 @@ int FS::append(std::string filepath1, std::string filepath2)
 int FS::mkdir(std::string dirpath)
 {
     std::cout << "FS::mkdir(" << dirpath << ")\n";
-    int currentDirectoryBlock = this->currentWorkingDir.first_blk;
+    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(dirpath);
+    if(parsedPathPtr == nullptr)
+        return WRONG_PATH_FORMAT;
+
+
+
+    dir_entry dirBefore = this->currentWorkingDir;
+    dirpath = std::get<0>(*parsedPathPtr);
+    this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
+    this->loadNewDirectory();
+   
     int newDirBlock = this->getFreeBlock();
     dir_entry newDirEntry((char *)dirpath.c_str(), 0, newDirBlock, TYPE_DIR, READ | WRITE | EXECUTE);
     this->writeDirectoryEntry(newDirEntry);
-    
 
     std::string parrent = "..";
     int parentBlock = this->currentWorkingDir.first_blk;
     dir_entry parentDirEntry((char*)parrent.c_str(), 0, parentBlock, TYPE_DIR, READ | WRITE | EXECUTE);
-    dir_entry dirBefore = this->currentWorkingDir;
     this->currentWorkingDir = newDirEntry;
 
     int previousDirCount = this->dirCount;
@@ -717,6 +860,7 @@ int FS::mkdir(std::string dirpath)
     this->writeDirectoryEntry(parentDirEntry, true);
     this->currentWorkingDir = dirBefore;
     this->dirCount = previousDirCount;
+    this->loadNewDirectory();
 
     return 0;
 }
@@ -726,40 +870,31 @@ int FS::cd(std::string dirpath, bool muteCall)
 {   
     if(!muteCall)
         std::cout << "FS::cd(" << dirpath << ")\n";
-    dir_entry* entry = this->findDirectoryEntry(dirpath); 
-    
-    if(dirpath.compare("..") == 0){
-        
-       this->currentWorkingDir = this->dirEntries[DIR_PARENT];
-       this->loadNewDirectory();
-       this->currentWorkingDir = this->dirEntries[DIR_SELF]; 
-    }
-    
-    if (entry == nullptr)
-    {
-        std::cout << "Directory not found!\n";
-        return FILE_NOT_FOUND;
-    }
-    else if(dirpath.compare("..") != 0){
-        this->currentWorkingDir = *entry; 
-        this->loadNewDirectory();
-    }
-    
+    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(dirpath);
+    if(parsedPathPtr == nullptr)
+        return WRONG_PATH_FORMAT;
+    this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
+    this->loadNewDirectory();
+    std::string stringAtEnd = std::get<0>(*parsedPathPtr);
+    dir_entry *entry = this->findDirectoryEntry(stringAtEnd);
+    if(entry == nullptr)
+        return WRONG_PATH_FORMAT;
+    this->currentWorkingDir.first_blk = entry->first_blk;
+    this->loadNewDirectory();
+    this->currentWorkingDir = this->dirEntries[DIR_SELF];
     return 0;
 }
 
-// pwd prints the full path, i.e., from the root directory, to the current
-// directory, including the currect directory name
 int FS::pwd()
 {
     std::cout << "FS::pwd()\n";
-
-    dir_entry* parent = this->findDirectoryEntry("..");
-    if(parent == nullptr)
+    if(std::string(this->currentWorkingDir.file_name).compare("/") == 0)
     {
         std::cout << "/" << "\n";
         return 0;
-    }
+    } 
+
+    dir_entry* parent = this->findDirectoryEntry("..");
 
     std::string path = currentWorkingDir.file_name;
     
@@ -805,7 +940,6 @@ dir_entry::dir_entry(char *file_name, uint32_t size, uint16_t first_blk, uint8_t
         file_name,
         sizeof(this->file_name) - 1);
 
-    std::cout << "CREATING ENTRY WITH NAME: " << this->file_name << "\n";
     this->size = size;
     this->first_blk = first_blk;
     this->type = type;
