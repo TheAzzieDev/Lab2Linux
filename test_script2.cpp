@@ -59,9 +59,10 @@ Shell::run()
     filesystem.disk.read(2, buffer);
 
     //filesystem.cp("test.txt", "testdir");
-    
+    std::string aLittleTest = filesystem.addPadding("123");
 
     filesystem.cd("testdir");
+    filesystem.cd("..");
     filesystem.disk.read(0, buffer);
     filesystem.cd("..");
     filesystem.mv("test.txt", "testdir");
@@ -87,6 +88,11 @@ Shell::run()
     filesystem.cd("/");
     filesystem.cd("testdir/omg");
     filesystem.cat("/testdir/test.txt");
+    filesystem.mv("/testdir/test.txt", "/");
+    filesystem.cd("/");
+    filesystem.cat("/testdir/test.txt");
+    filesystem.cat("/test.txt");
+    
 
     filesystem.create("/testdir/omg/whatisthis.txt");
     filesystem.cat("/testdir/omg/whatisthis.txt");
