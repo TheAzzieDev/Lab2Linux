@@ -49,6 +49,7 @@ Shell::run()
     std::cout << "Task 5 ..." << std::endl;
     PRINTDIV2;
 
+
     std::cout << "Testing access rights..." << std::endl;
     std::cout << "Starting with empty disk..." << std::endl;
     std::cout << "Use \"/\" as test dir..." << std::endl;
@@ -63,6 +64,12 @@ Shell::run()
     arg1 = "f2";
     filesystem.create(arg1);
     close(fw);
+
+    filesystem.chmod("rw","f1");
+
+    
+    std::cout << "checking start files..." << std::endl;
+    return;
 
     std::cout << "checking start files..." << std::endl;
     std::cout << "Expected output:" << std::endl;

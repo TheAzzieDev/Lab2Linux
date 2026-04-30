@@ -43,7 +43,6 @@
         },
 
 
-
         {
             "name": "Debug test1",
             "type": "cppdbg",
@@ -74,7 +73,7 @@
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": true,
+            "externalConsole": false,
             "MIMode": "gdb",
             "miDebuggerPath": "/usr/bin/gdb", 
             "setupCommands": [
@@ -85,6 +84,71 @@
                 ],
 
         },
+
+
+        {
+            "name": "Debug test3",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test3",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb", 
+            "setupCommands": [
+            {
+                "text": "-enable-pretty-printing\nskip -gfi /usr/include/c++/*/*/*\nskip -gfi /usr/include/c++/*/*\nskip -gfi /usr/include/c++/*",
+                "ignoreFailures": true
+            }
+                ],
+
+        },
+
+        {
+            "name": "Debug test4",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test4",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb", 
+            "setupCommands": [
+            {
+                "text": "-enable-pretty-printing\nskip -gfi /usr/include/c++/*/*/*\nskip -gfi /usr/include/c++/*/*\nskip -gfi /usr/include/c++/*",
+                "ignoreFailures": true
+            }
+                ],
+
+        },
+
+
+            {
+            "name": "Debug test5",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test5",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/bin/gdb", 
+            "setupCommands": [
+            {
+                "text": "-enable-pretty-printing\nskip -gfi /usr/include/c++/*/*/*\nskip -gfi /usr/include/c++/*/*\nskip -gfi /usr/include/c++/*",
+                "ignoreFailures": true
+            }
+                ],
+
+        }
         
     ]
 }

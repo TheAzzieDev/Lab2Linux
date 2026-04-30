@@ -35,6 +35,21 @@
             "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
             "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test2",
             "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test3",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test4",
+            "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test5",
+            "binaryArgs": []
         }
     ]
 }

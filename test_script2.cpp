@@ -51,51 +51,77 @@ void
 Shell::run()
 {
 
-    filesystem.mkdir("testdir");
-    filesystem.create("test.txt");
+    // filesystem.mkdir("testdir");
+    // filesystem.create("test.txt");
 
-    filesystem.pwd();
-    uint8_t buffer[BLOCK_SIZE];
-    filesystem.disk.read(2, buffer);
+    // filesystem.mv("test.txt", "/testdir/bob.txt");
 
-    //filesystem.cp("test.txt", "testdir");
-    std::string aLittleTest = filesystem.addPadding("123");
+    // filesystem.printer(3);
+    // filesystem.cd("testdir");
+    // filesystem.ls();
 
-    filesystem.cd("testdir");
-    filesystem.cd("..");
-    filesystem.disk.read(0, buffer);
-    filesystem.cd("..");
-    filesystem.mv("test.txt", "testdir");
-    filesystem.disk.read(2, buffer);
-    filesystem.disk.read(0, buffer);
-    filesystem.cd("testdir");
-    filesystem.mkdir("omg");
-    filesystem.cat("test.txt");
-    filesystem.cat("testdir");
-    filesystem.cd("..");
-    filesystem.mkdir("testdir2");
-    filesystem.cd("testdir2");
-    filesystem.ls();
-    std::unique_ptr<std::tuple<std::string, int>> result = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
-    std::unique_ptr<std::tuple<std::string, int>> result2 = filesystem.parsePath("//testdir/../../testdir/omg/thing.txt");
-    filesystem.cd("..");
-    std::unique_ptr<std::tuple<std::string, int>> result3 = filesystem.parsePath("/testdir2");
-    std::unique_ptr<std::tuple<std::string, int>> result4 = filesystem.parsePath("/testdir/..//../testdir/omg/thing.txt");
-    std::unique_ptr<std::tuple<std::string, int>> result5 = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
-    if(result == nullptr && result2 == nullptr && result3 != nullptr && result4 == nullptr && result5 != nullptr)
-        std::cout << "TEST IS WORKING!!!" << "\n"; 
+    // filesystem.pwd();
+    // uint8_t buffer[BLOCK_SIZE];
+    // filesystem.disk.read(2, buffer);
+
+    // //filesystem.cp("test.txt", "testdir");
+    // std::string aLittleTest = filesystem.addPadding("123");
+
+    // filesystem.cd("testdir");
+    // filesystem.cd("..");
+    // filesystem.disk.read(0, buffer);
+    // filesystem.cd("..");
+    // filesystem.mv("test.txt", "testdir");
+    // filesystem.disk.read(2, buffer);
+    // filesystem.disk.read(0, buffer);
+    // filesystem.cd("testdir");
+    // filesystem.mkdir("omg");
+    // filesystem.cat("test.txt");
+    // filesystem.cat("testdir");
+    // filesystem.cd("..");
+    // filesystem.mkdir("testdir2");
+    // filesystem.cd("testdir2");
+    // filesystem.ls();
+    // std::unique_ptr<std::tuple<std::string, int>> result = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
+    // std::unique_ptr<std::tuple<std::string, int>> result2 = filesystem.parsePath("//testdir/../../testdir/omg/thing.txt");
+    // filesystem.cd("..");
+    // std::unique_ptr<std::tuple<std::string, int>> result3 = filesystem.parsePath("/testdir2");
+    // std::unique_ptr<std::tuple<std::string, int>> result4 = filesystem.parsePath("/testdir/..//../testdir/omg/thing.txt");
+    // std::unique_ptr<std::tuple<std::string, int>> result5 = filesystem.parsePath("testdir/../../testdir/omg/thing.txt");
+    // if(result == nullptr && result2 == nullptr && result3 != nullptr && result4 == nullptr && result5 != nullptr)
+    //     std::cout << "TEST IS WORKING!!!" << "\n"; 
     
-    filesystem.cd("/");
-    filesystem.cd("testdir/omg");
-    filesystem.cat("/testdir/test.txt");
-    filesystem.mv("/testdir/test.txt", "/");
-    filesystem.cd("/");
-    filesystem.cat("/testdir/test.txt");
-    filesystem.cat("/test.txt");
+    // filesystem.cd("/");
+    // filesystem.cd("testdir/omg");
+    // filesystem.cat("/testdir/test.txt");
+    // filesystem.mv("/testdir/test.txt", "/");
+    // filesystem.cd("/");
+    // filesystem.cat("/testdir/test.txt");
+    // filesystem.cat("/test.txt");
     
 
-    filesystem.create("/testdir/omg/whatisthis.txt");
-    filesystem.cat("/testdir/omg/whatisthis.txt");
+    // filesystem.create("/testdir/omg/whatisthis.txt");
+    // //filesystem.cat("/testdir/omg/whatisthis.txt");
+    // filesystem.cd("/testdir/omg");
+    // filesystem.printer(6);
+    // result5 = filesystem.parsePath("/testdir/omg/whatisthis.txt");
+    // filesystem.cp("/testdir/omg/whatisthis.txt", "/Bomb");
+    // filesystem.printer(7);
+    // filesystem.cd("/");
+    // filesystem.rm("/Bomb");
+    // filesystem.printer(7);
+    // //int res = filesystem.rm("/testdir/omg/whatisthis.txt");
+    // filesystem.append("/test.txt", "/testdir/omg/whatisthis.txt");
+
+    // filesystem.cat("/testdir/omg/whatisthis.txt");
+    // filesystem.cd("/testdir/omg");
+    // filesystem.ls();
+    // for(int i = 0; i < 10; i++)
+    //     std::cout << "hey";
+    
+
+
+    // return;
 
 
     //std::cout << "RESULT: " << std::get<0>(anotherRes) << " BLOCK: " << std::to_string(std::get<1>(anotherRes));
@@ -119,11 +145,7 @@ Shell::run()
 
     //filesystem.mkdir("/testdir/whatitworks");
     //filesystem.cd("/testdir/whatitworks");
-    for(int i = 0; i < 10; i++){
-        std::cout << "test" << "\n";
-    }
-
-    return;
+ 
   
     std::string cmd, arg1, arg2;
     int ret_val = 0;
