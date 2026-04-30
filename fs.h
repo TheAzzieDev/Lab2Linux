@@ -32,7 +32,10 @@
 #define ACCESS_RIGHTS_CHARS 1
 #define WRONG_PATH_FORMAT 406
 #define WRONG_PERMISSION_FORMAT 406
+#define WRONG_PERMISSIONS 406
+#define DIRECTORY_RESTRICTS_ACCESS 403
 #define STANDARD_DIR_COUNT 2
+
 
 
 #define TYPE_FILE 0
@@ -136,6 +139,9 @@ public:
     // chmod <accessrights> <filepath> changes the access rights for the
     // file <filepath> to <accessrights>.
     int chmod(std::string accessrights, std::string filepath);
+    bool hasWritePerm(dir_entry entry);
+    bool hasExecutePerm(dir_entry entry);
+    bool hasReadPerm(dir_entry entry);
 };
 
 #endif

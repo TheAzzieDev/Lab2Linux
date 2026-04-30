@@ -9,26 +9,26 @@
 #include <ios>
 #include <limits>
 #include <memory>
-
+#include <cctype>
+#include <bits/stdc++.h>
 #include "fs.h"
 
 
 
 /*
-TASK4 FUNCTIONS TO FIX PATH FOR!!!!!
-- CREATE XXXXXXXXXX
-- CAT XXXXXXXXXXXX
-- MV XXXXXXXXXXX
-- CP XXXXXXXXXX
-- RM XXXXXXXXXX
-- APPEND XXXXX
-- MKDIR XXXXXXXXX
-- CD XXXXXXXXXXXX
+TASK5 FUNCTIONS TO implement Access controll
+- CREATE WRITE in DIR  XXXXXXX
+- CAT READ XXXXXXX
+- MV WRITE READ on both XXXXXXX
+- CP source READ, dest WRITE XXXXX
+- RM WRITE  XXXXXXX
+- APPEND source READ dest WRITE
+- MKDIR WRITE in folder XXXXXX
+- CD EXECUTE XXXXXXXX 
+- LS READ XXXXXXXXX
 
 
 */
-
-
 
 std::string FS::dirParseAttr(std::string inputString)
 {
@@ -250,7 +250,9 @@ void FS::deserializeEntries(int block)
     uint8_t buffer[BLOCK_SIZE];
     this->disk.read(block, buffer);
     std::string bufferResult = "";
-    bufferResult = (char *)buffer;
+    bufferResult = (char*)buffer;
+    if(bufferResult.size() >= BLOCK_SIZE)
+        bufferResult.resize(BLOCK_SIZE);
 
     for(int i = 0; i < AMOUNT_OF_DIRS; i++){
         this->dirEntries[i] = dir_entry();
@@ -350,8 +352,15 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
   
     for (size_t i = 0; i < parts.size() - 1; i++) {
         dir_entry* entry = this->findDirectoryEntry(parts[i]);
-
         if (entry == nullptr || entry->type != TYPE_DIR) {
+            this->currentWorkingDir = originalDir;
+            this->loadNewDirectory();
+            return nullptr;
+        }
+        dir_entry entryTest = *entry;
+        if(!this->hasExecutePerm(entryTest)){
+            std::string filename = "";
+            filename.assign(entryTest.file_name, BLOCK_SIZE);
             this->currentWorkingDir = originalDir;
             this->loadNewDirectory();
             return nullptr;
@@ -413,16 +422,34 @@ int FS::create(std::string filepath)
         return WRONG_PATH_FORMAT;
 
     dir_entry dirBefore = this->currentWorkingDir;
+
     this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
     this->loadNewDirectory();
     filepath = std::get<0>(*parsedPathPtr);
 
-    if (this->getBlock(filepath))
+    if(!this->hasWritePerm(this->currentWorkingDir))
+    {
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return DIRECTORY_RESTRICTS_ACCESS;
+    }
+
+    if (this->getBlock(filepath)){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
         return FILE_EXISTS;
-    if (filepath.size() > FILENAME_CHARS)
+    }
+        
+    if (filepath.size() > FILENAME_CHARS){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
         return FILENAME_TOO_LARGE;
-    if (this->dirCount == AMOUNT_OF_DIRS)
+    }
+    if (this->dirCount == AMOUNT_OF_DIRS){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
         return NO_VALID_INDEX;
+    }
 
     std::string userInput = "NONE";
 
@@ -461,7 +488,7 @@ int FS::create(std::string filepath)
     this->safeString(toAddString);
     this->disk.write(block, (uint8_t *)toAddString.c_str());
 
-    dir_entry newEntry((char *)filepath.c_str(), totalSizeOfFile, firstBlock, TYPE_FILE, 1);
+    dir_entry newEntry((char *)filepath.c_str(), totalSizeOfFile, firstBlock, TYPE_FILE, READ + WRITE);
     this->writeDirectoryEntry(newEntry);
     this->currentWorkingDir = dirBefore;
     this->loadNewDirectory();
@@ -490,11 +517,19 @@ int FS::cat(std::string filepath)
         this->loadNewDirectory();
         return FILE_NOT_FOUND;
     }
-      
+
     else if(entry->type == TYPE_DIR){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
         return ENTRY_IS_DIR;
+    }
+
+    dir_entry entryTest = *entry;
+    if(!this->hasReadPerm(entryTest))
+    {
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
     }
 
     int index = 0;
@@ -537,6 +572,7 @@ int FS::ls()
 {
 
     std::cout << "FS::ls()\n";
+
     int sizeOfNameString = 4;
 
     int count = 0;
@@ -559,7 +595,7 @@ int FS::ls()
                     std::cout << "name";
                     for(int i = 0; i < FILENAME_CHARS - sizeOfNameString; i++)
                         std::cout << " ";
-                    std::cout << "type" << "\t" << "size" << "\n";
+                    std::cout << "type" << "\t"  "accessRights" << "\t" << "size" << "\n";
                 }
 
                 int spaceFile = FILENAME_CHARS - filename.size();
@@ -567,7 +603,37 @@ int FS::ls()
                 for(int i = 0; i < spaceFile; i++){
                     filename += " ";
                 }   
-                std::cout << filename << type << "\t" << size << "\n";
+                
+                std::string accessRightsString = "";
+                int accessRights = currentEntry.access_rights;
+                switch (accessRights)
+                {
+                case READ:
+                    accessRightsString = "r--";
+                    break;
+                case WRITE:
+                    accessRightsString = "-w-";
+                    break;
+                case EXECUTE:
+                    accessRightsString = "--x";
+                    break;
+                case READ + EXECUTE:
+                    accessRightsString = "r-x";
+                    break;
+                case READ + WRITE:
+                    accessRightsString = "rw-";
+                    break;
+                case WRITE + EXECUTE:
+                    accessRightsString = "-wx";
+                    break;   
+                case WRITE + EXECUTE + READ:
+                    accessRightsString = "rwx";
+                    break;  
+                default:
+                    break;
+                }
+                
+                std::cout << filename << type << "\t" << accessRightsString << "\t" << "\t" << size << "\n";
                 count++;
             }
 
@@ -605,12 +671,30 @@ int FS::cp(std::string sourcepath, std::string destpath)
 
     this->currentWorkingDir.first_blk = std::get<1>(*destpathPtr);
     this->loadNewDirectory();
+    dir_entry destParent = this->currentWorkingDir;
     dir_entry *dest = this->findDirectoryEntry(std::get<0>(*destpathPtr));
 
     if (dest != nullptr && dest->type == TYPE_FILE){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
         return FILE_EXISTS;
+    }
+    dir_entry destTest;
+    if(dest != nullptr)
+        destTest = *dest;
+
+    if(dest != nullptr && (!this->hasWritePerm(destTest) || !this->hasWritePerm(sourceEntry)))
+    {
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
+    }
+
+    else if(!this->hasWritePerm(sourceEntry) || !this->hasWritePerm(destParent))
+    {
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
     }
 
 
@@ -707,11 +791,11 @@ int FS::mv(std::string sourcepath, std::string destpath)
 
     std::unique_ptr<std::tuple<std::string, int>> sourcepathPtr = this->parsePath(sourcepath);
     std::unique_ptr<std::tuple<std::string, int>> destpathPtr = this->parsePath(destpath);
-    std::string destpathString = std::get<0>(*destpathPtr);
 
     if(sourcepathPtr == nullptr || destpathPtr == nullptr){
         return WRONG_PATH_FORMAT;
     }
+    std::string destpathString = std::get<0>(*destpathPtr);
 
 
     dir_entry dirBefore = this->currentWorkingDir;
@@ -727,7 +811,13 @@ int FS::mv(std::string sourcepath, std::string destpath)
         this->loadNewDirectory();
         return FILE_NOT_FOUND;
     }
+
     dir_entry sourceEntry = *sourceEntryPtr;
+    if(!this->hasWritePerm(sourceEntry) || !this->hasReadPerm(sourceEntry)){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
+    }
 
     std::string destFilename = std::get<0>(*destpathPtr);
     this->currentWorkingDir.first_blk = std::get<1>(*destpathPtr);
@@ -739,6 +829,11 @@ int FS::mv(std::string sourcepath, std::string destpath)
     if(destinationEntryPtr != nullptr){
         isNullFlag = false;
         destinationEntry  = *destinationEntryPtr;
+        if(!this->hasWritePerm(destinationEntry)){
+            this->currentWorkingDir = dirBefore;
+            this->loadNewDirectory();
+            return WRONG_PERMISSIONS;
+        }
     }
       
     if (!isNullFlag && destinationEntryPtr->type != TYPE_DIR)
@@ -818,6 +913,7 @@ int FS::rm(std::string filepath)
     dir_entry dirBefore = this->currentWorkingDir;
     this->currentWorkingDir.first_blk = std::get<1>(*filepathPtr);
     this->loadNewDirectory();
+
     dir_entry *entry = this->findDirectoryEntry(entryStringName);
 
     if (entry == nullptr){
@@ -832,6 +928,13 @@ int FS::rm(std::string filepath)
             return ENTRY_CANNOT_BE_DELETED; 
         }
     }
+
+    if(!this->hasWritePerm(this->currentWorkingDir)){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
+    }
+
 
     
     uint8_t buffer[BLOCK_SIZE];
@@ -917,6 +1020,14 @@ int FS::append(std::string filepath1, std::string filepath2)
         return FILE_NOT_FOUND;
     }
     dir_entry destEntry = *dest;
+
+    if(!this->hasWritePerm(destEntry) ||
+    !this->hasReadPerm(srcEntry) 
+    ){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
+    }
 
     
     this->currentWorkingDir = dirBefore;
@@ -1021,6 +1132,7 @@ int FS::mkdir(std::string dirpath)
     dirpath = std::get<0>(*parsedPathPtr);
     this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
     this->loadNewDirectory();
+
     std::string filename = std::get<0>(*parsedPathPtr);
     dir_entry * entryTest = this->findDirectoryEntry(filename);
 
@@ -1070,6 +1182,8 @@ int FS::cd(std::string dirpath, bool muteCall)
     this->loadNewDirectory();
     std::string stringAtEnd = std::get<0>(*parsedPathPtr);
     dir_entry *entry = this->findDirectoryEntry(stringAtEnd);
+    
+
     if(entry == nullptr){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
@@ -1130,32 +1244,20 @@ int FS::pwd()
 int FS::chmod(std::string accessrights, std::string filepath)
 {
     std::cout << "FS::chmod(" << accessrights << "," << filepath << ")\n";
-        if(accessrights.size() != 3)
-        return WRONG_PERMISSION_FORMAT;
-
+    
     int accessNum = 0;
-    std::vector<std::string> accessChars{"r", "w", "x"};
-    for(std::string character : accessChars){
-        int count = 0;
-        for(int i = 0; i < accessrights.size(); i++){
-            std::string charCompare(accessrights.at(i), 1);
-            if(character.compare(charCompare) == 0 && count > 1)
-                return WRONG_PERMISSION_FORMAT;
-            count++;
-        }
+    if(accessrights.size() != 1){
+        return WRONG_PERMISSION_FORMAT;
+    }  
 
+    char character = accessrights.at(0);
+    if(isdigit(character))
+    {
+        std::string charactarString(1, character);
+        accessNum = atoi(charactarString.c_str());
     }
-
-    if(accessrights.find("r") != std::string::npos){
-        accessNum += READ;
-    }
-
-    if(accessrights.find("w") != std::string::npos){
-        accessNum += WRITE;
-    }
-
-    if(accessrights.find("x") != std::string::npos){
-        accessNum += EXECUTE;
+    else{
+        return WRONG_PERMISSION_FORMAT;
     }
 
     std::unique_ptr<std::tuple<std::string, int>> filepathPtr = this->parsePath(filepath);
@@ -1188,11 +1290,70 @@ int FS::chmod(std::string accessrights, std::string filepath)
     bufferString.replace(index + FILENAME_CHARS + SIZE_CHARS + FIRST_BLK_CHARS + TYPE_CHARS, 1, std::to_string(accessNum));
     this->safeString(bufferString);
     this->disk.write(parentBlock, (uint8_t*)bufferString.c_str());
-
+    if(parentBlock == this->currentWorkingDir.first_blk)
+        dirBefore.access_rights = accessNum;
     this->currentWorkingDir = dirBefore;
     loadNewDirectory();
 
     return 0;
+}
+
+bool FS::hasWritePerm(dir_entry entry)
+{
+    int accessRights = entry.access_rights;
+    switch (accessRights)
+    {
+    case WRITE: 
+        return true;
+        break;
+    case WRITE + READ: 
+        return true;
+        break;
+    case WRITE + EXECUTE:
+        return true;
+        break;
+    case WRITE + READ + EXECUTE:
+        return true;
+        break;
+    default:
+        std::cout << "Missing Write Permission!" << "\n";
+        return false;
+        break;
+    }
+}
+
+bool FS::hasExecutePerm(dir_entry entry)
+{
+    int accessRights = entry.access_rights;
+    switch (accessRights)
+    {
+    case EXECUTE: 
+        return true;
+        break;
+    case EXECUTE + READ: 
+        return true;
+        break;
+    case EXECUTE + WRITE:
+        return true;
+        break;
+    case WRITE + READ + EXECUTE:
+        return true;
+        break;
+    default:
+        std::cout << "Missing Execute Permission!" << "\n";
+        return false;
+        break;
+    }
+}
+
+bool FS::hasReadPerm(dir_entry entry)
+{
+    int accessRights = entry.access_rights;
+    if(accessRights >= 4)
+        return true;
+
+    std::cout << "Missing Read Permission!" << "\n";
+    return false;
 }
 
 // ISSUE1
