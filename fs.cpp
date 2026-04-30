@@ -1130,6 +1130,68 @@ int FS::pwd()
 int FS::chmod(std::string accessrights, std::string filepath)
 {
     std::cout << "FS::chmod(" << accessrights << "," << filepath << ")\n";
+        if(accessrights.size() != 3)
+        return WRONG_PERMISSION_FORMAT;
+
+    int accessNum = 0;
+    std::vector<std::string> accessChars{"r", "w", "x"};
+    for(std::string character : accessChars){
+        int count = 0;
+        for(int i = 0; i < accessrights.size(); i++){
+            std::string charCompare(accessrights.at(i), 1);
+            if(character.compare(charCompare) == 0 && count > 1)
+                return WRONG_PERMISSION_FORMAT;
+            count++;
+        }
+
+    }
+
+    if(accessrights.find("r") != std::string::npos){
+        accessNum += READ;
+    }
+
+    if(accessrights.find("w") != std::string::npos){
+        accessNum += WRITE;
+    }
+
+    if(accessrights.find("x") != std::string::npos){
+        accessNum += EXECUTE;
+    }
+
+    std::unique_ptr<std::tuple<std::string, int>> filepathPtr = this->parsePath(filepath);
+    if(filepathPtr == nullptr)
+        return WRONG_PATH_FORMAT;
+
+    std::string filename = std::get<0>(*filepathPtr);
+    int parentBlock = std::get<1>(*filepathPtr);
+
+    dir_entry dirBefore = this->currentWorkingDir;
+    this->currentWorkingDir.first_blk = parentBlock;
+    this->loadNewDirectory();
+
+    dir_entry* entryPtr = this->findDirectoryEntry(filename);
+    
+    if(entryPtr == nullptr)
+    {
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return FILE_NOT_FOUND;
+    }
+
+    dir_entry entry = *entryPtr;
+    uint8_t buffer[BLOCK_SIZE];
+    this->disk.read(parentBlock, buffer);
+    std::string bufferString = "";
+    bufferString.assign((char*)buffer, BLOCK_SIZE);
+    int index = this->getDirIndex(filename);
+    
+    bufferString.replace(index + FILENAME_CHARS + SIZE_CHARS + FIRST_BLK_CHARS + TYPE_CHARS, 1, std::to_string(accessNum));
+    this->safeString(bufferString);
+    this->disk.write(parentBlock, (uint8_t*)bufferString.c_str());
+
+    this->currentWorkingDir = dirBefore;
+    loadNewDirectory();
+
     return 0;
 }
 
