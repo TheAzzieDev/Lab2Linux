@@ -139,9 +139,9 @@ public:
     // chmod <accessrights> <filepath> changes the access rights for the
     // file <filepath> to <accessrights>.
     int chmod(std::string accessrights, std::string filepath);
-    bool hasWritePerm(dir_entry entry);
-    bool hasExecutePerm(dir_entry entry);
-    bool hasReadPerm(dir_entry entry);
+    bool hasWritePerm(dir_entry entry, bool muteCall = false);
+    bool hasExecutePerm(dir_entry entry, bool muteCall = false);
+    bool hasReadPerm(dir_entry entry, bool muteCall = false);
 };
 
 #endif

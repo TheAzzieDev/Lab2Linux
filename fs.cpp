@@ -62,7 +62,6 @@ int FS::cdHelper(std::string dirpath)
     dir_entry* entry = this->findDirectoryEntry(dirpath); 
     
     if(dirpath.compare("..") == 0){
-        
        this->currentWorkingDir = this->dirEntries[DIR_PARENT];
        this->loadNewDirectory();
        this->currentWorkingDir = this->dirEntries[DIR_SELF]; 
@@ -359,14 +358,26 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
         }
         dir_entry entryTest = *entry;
         if(!this->hasExecutePerm(entryTest)){
-            std::string filename = "";
-            filename.assign(entryTest.file_name, BLOCK_SIZE);
             this->currentWorkingDir = originalDir;
             this->loadNewDirectory();
             return nullptr;
         }
 
         this->cdHelper(parts[i]);
+    }
+
+    dir_entry* entry = this->findDirectoryEntry(parts[parts.size() - 1]);
+    dir_entry entryTest;
+    bool flag = false;
+    if(entry != nullptr){
+        flag = true;
+        entryTest = *entry;
+    }
+        
+    if(entry != nullptr && !this->hasExecutePerm(entryTest, true) && entry->type == TYPE_DIR){
+        this->currentWorkingDir = originalDir;
+        this->loadNewDirectory();
+        return nullptr;
     }
 
     // Final result
@@ -462,10 +473,10 @@ int FS::create(std::string filepath)
     std::string toAddString = "";
 
     toAddString += filenameInDisk;
-    // // for (int i = 0; i < BLOCK_SIZE; i++) {
-    // //    toAddString += "A";
-    // // }
-    // // currentSize = toAddString.size();
+    // for (int i = 0; i < BLOCK_SIZE; i++) {
+    //    toAddString += "A";
+    // }
+    // currentSize = toAddString.size();
     int totalSizeOfFile = 0;
 
     while (std::getline(std::cin, userInput) && userInput.size() && !userInput.empty())
@@ -546,7 +557,7 @@ int FS::cat(std::string filepath)
 
             std::string content = "";
             content.assign((char *)buffer, BLOCK_SIZE);
-            std::cout << content.substr(content.find("\n") + 1) << "\n";
+            std::cout << content.substr(content.find("\n") + 1);
 
             while (block != FAT_EOF)
             {
@@ -1126,8 +1137,6 @@ int FS::mkdir(std::string dirpath)
     if(parsedPathPtr == nullptr)
         return WRONG_PATH_FORMAT;
 
-
-
     dir_entry dirBefore = this->currentWorkingDir;
     dirpath = std::get<0>(*parsedPathPtr);
     this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
@@ -1298,7 +1307,7 @@ int FS::chmod(std::string accessrights, std::string filepath)
     return 0;
 }
 
-bool FS::hasWritePerm(dir_entry entry)
+bool FS::hasWritePerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
     switch (accessRights)
@@ -1316,13 +1325,14 @@ bool FS::hasWritePerm(dir_entry entry)
         return true;
         break;
     default:
-        std::cout << "Missing Write Permission!" << "\n";
+        if(!muteCall)
+            std::cout << "Missing Write Permission!" << "\n";
         return false;
         break;
     }
 }
 
-bool FS::hasExecutePerm(dir_entry entry)
+bool FS::hasExecutePerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
     switch (accessRights)
@@ -1340,19 +1350,20 @@ bool FS::hasExecutePerm(dir_entry entry)
         return true;
         break;
     default:
-        std::cout << "Missing Execute Permission!" << "\n";
+        if(!muteCall)
+            std::cout << "Missing Execute Permission!" << "\n";
         return false;
         break;
     }
 }
 
-bool FS::hasReadPerm(dir_entry entry)
+bool FS::hasReadPerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
     if(accessRights >= 4)
         return true;
-
-    std::cout << "Missing Read Permission!" << "\n";
+    if(!muteCall)
+        std::cout << "Missing Read Permission!" << "\n";
     return false;
 }
 

@@ -50,6 +50,11 @@
             "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
             "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/test5",
             "binaryArgs": []
+        },
+        {
+            "cwd": "/home/azziedev/Desktop/programs/Lab2Linux",
+            "binaryPath": "/home/azziedev/Desktop/programs/Lab2Linux/filesystem",
+            "binaryArgs": []
         }
     ]
 }
