@@ -431,6 +431,8 @@ std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::st
     this->currentWorkingDir = originalDir;
     this->loadNewDirectory();
 
+    if(filename.compare(parentFilename) == 0)
+        return nullptr;
     return std::unique_ptr<std::tuple<std::string, int, std::string>>(new std::tuple<std::string, int, std::string>(filename, parentBlock, parentFilename));
 }
 
@@ -905,8 +907,19 @@ int FS::mv(std::string sourcepath, std::string destpath)
     if(sourcepathPtr == nullptr || destpathPtr == nullptr){
         return WRONG_PATH_FORMAT;
     }
-    std::string destpathString = std::get<0>(*destpathPtr);
 
+
+    std::string sourcepathString = std::get<0>(*sourcepathPtr);
+    std::string destpathString = std::get<0>(*destpathPtr);
+    int destpathBlock = std::get<1>(*destpathPtr);
+    
+    if(destpathBlock == this->currentWorkingDir.first_blk){
+        std::unique_ptr<dir_entry> destTest = this->findDirectoryEntry(destpathString);
+        if(destTest == nullptr)
+        {
+            return FILE_NOT_FOUND;
+        }
+    }
 
     dir_entry dirBefore = this->currentWorkingDir;
     this->currentWorkingDir.first_blk = std::get<1>(*sourcepathPtr);
@@ -939,11 +952,27 @@ int FS::mv(std::string sourcepath, std::string destpath)
     if(destinationEntryPtr != nullptr){
         isNullFlag = false;
         destinationEntry  = *destinationEntryPtr;
+
         if(!this->hasWritePerm(destinationEntry)){
             this->currentWorkingDir = dirBefore;
             this->loadNewDirectory();
             return WRONG_PERMISSIONS;
         }
+
+        dir_entry tempBefore = this->currentWorkingDir;
+        this->currentWorkingDir = destinationEntry;
+        this->loadNewDirectory();
+        std::string sourceFilenameTest = sourceEntry.file_name;
+        std::unique_ptr<dir_entry> entryInDest = this->findDirectoryEntry(sourceFilenameTest);
+
+        if(entryInDest != nullptr){
+            this->currentWorkingDir = dirBefore;
+            this->loadNewDirectory();
+            return WRONG_PERMISSIONS;
+        }
+
+        this->currentWorkingDir = tempBefore;
+        this->loadNewDirectory();
     }
       
     if (!isNullFlag && destinationEntryPtr->type != TYPE_DIR)
@@ -1109,13 +1138,13 @@ int FS::append(std::string filepath1, std::string filepath2)
     // std::cout << "FS::append(" << filepath1 << "," << filepath2 << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> filepath1Ptr = this->parsePath(filepath1);
     std::unique_ptr<std::tuple<std::string, int, std::string>> filepath2Ptr = this->parsePath(filepath2);
-    std::string filepath1String = std::get<0>(*filepath1Ptr);
-    std::string filepath2String = std::get<0>(*filepath2Ptr);
-
-    dir_entry dirBefore = this->currentWorkingDir;
 
     if(filepath1Ptr == nullptr || filepath2Ptr == nullptr)
         return WRONG_PATH_FORMAT;
+    
+    dir_entry dirBefore = this->currentWorkingDir;
+    std::string filepath1String = std::get<0>(*filepath1Ptr);
+    std::string filepath2String = std::get<0>(*filepath2Ptr);
     
     this->currentWorkingDir.first_blk = std::get<1>(*filepath1Ptr); 
     this->loadNewDirectory();
