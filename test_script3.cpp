@@ -94,7 +94,7 @@ Shell::run()
     ret_val = filesystem.mkdir(arg1);
     if (ret_val) 
         std::cout << "Error: mkdir(d1) " << arg1 << " failed, error code " << ret_val << std::endl;
-    
+
     std::cout << "Expected output:" << std::endl;
     std::cout << "name\t type\t size" << std::endl;
     std::cout << "d1\t dir\t -" << std::endl;
@@ -182,7 +182,10 @@ Shell::run()
     std::cout << "f1\t file\t 16" << std::endl;
     std::cout << "/" << std::endl;
     std::cout << "Actual output:" << std::endl;
+
+
     ret_val = filesystem.pwd();
+    //filesystem.cd("d1");
     if (ret_val)
         std::cout << "Error: pwd failed, error code " << ret_val << std::endl;
     ret_val = filesystem.ls();

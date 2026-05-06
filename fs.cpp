@@ -124,7 +124,7 @@ FS::~FS()
 // FORMAT WORKS!!!
 int FS::format()
 {
-    std::cout << "FS::format()\n";
+    // std::cout << "FS::format()\n";
     this->dirCount = 0;
     this->fat[ROOT_BLOCK] = ROOT_BLOCK;
     this->fat[FAT_BLOCK] = FAT_BLOCK;
@@ -471,7 +471,7 @@ int FS::getBlock(std::string filename)
 // We are not checking length of filenames.
 int FS::create(std::string filepath)
 {
-    std::cout << "FS::create(" << filepath << ")\n";
+    // std::cout << "FS::create(" << filepath << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(filepath);
     if(parsedPathPtr == nullptr)
         return WRONG_PATH_FORMAT;
@@ -495,7 +495,7 @@ int FS::create(std::string filepath)
         return FILE_EXISTS;
     }
         
-    if (filepath.size() > FILENAME_CHARS){
+    if (filepath.size() > FILENAME_CHARS - 1){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
         return FILENAME_TOO_LARGE;
@@ -548,7 +548,7 @@ int FS::create(std::string filepath)
     this->currentWorkingDir = dirBefore;
     this->loadNewDirectory();
 
-    std::cout << "File created successfully!\n";
+    // std::cout << "File created successfully!\n";
     std::cin.clear();
     std::cin.sync();
     return 0;
@@ -557,7 +557,7 @@ int FS::create(std::string filepath)
 // cat <filepath> reads the content of a file and prints it on the screen
 int FS::cat(std::string filepath)
 {
-    std::cout << "FS::cat(" << filepath << ")\n";
+    // std::cout << "FS::cat(" << filepath << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> dirParsed = this->parsePath(filepath);
     if(dirParsed == nullptr)
         return WRONG_PATH_FORMAT;
@@ -626,7 +626,7 @@ int FS::cat(std::string filepath)
 int FS::ls()
 {
 
-    std::cout << "FS::ls()\n";
+    // std::cout << "FS::ls()\n";
 
     int sizeOfNameString = 4;
 
@@ -642,7 +642,10 @@ int FS::ls()
         dir_entry key = entryVector.at(i);
         int j = i - 1;
 
-        while (j >= 0 && std::string(entryVector.at(j).file_name).compare(key.file_name) > 0) {
+        while (j >= 0 && (strcmp(entryVector.at(j).file_name, key.file_name) > 0  && 
+        std::string(entryVector.at(j).file_name).size() == std::string(key.file_name).size()  ||
+        std::string(entryVector.at(j).file_name).size() > std::string(key.file_name).size() &&
+        (strcmp(entryVector.at(j).file_name, key.file_name) > 0 ))) {
             entryVector.at(j + 1)= entryVector.at(j);
             j = j - 1;
         }
@@ -657,6 +660,10 @@ int FS::ls()
         std::string filename = currentEntry.file_name;
         std::string size = std::to_string(currentEntry.size);
         std::string type = "";
+
+        if(size.compare("0") == 0)
+            size = "-";
+
         if(currentEntry.type == TYPE_FILE)
             type = "file";
         else
@@ -716,7 +723,7 @@ int FS::ls()
 // MIGHT BE A PROBLEM WITH COPYING TO SAME DIR
 int FS::cp(std::string sourcepath, std::string destpath)
 {
-    std::cout << "FS::cp(" << sourcepath << "," << destpath << ")\n";
+    // std::cout << "FS::cp(" << sourcepath << "," << destpath << ")\n";
 
     std::unique_ptr<std::tuple<std::string, int, std::string>> sourcepathPtr = this->parsePath(sourcepath);
     std::unique_ptr<std::tuple<std::string, int, std::string>> destpathPtr = this->parsePath(destpath); 
@@ -855,7 +862,7 @@ int FS::cp(std::string sourcepath, std::string destpath)
 //LEFT OF HERE!!!!!!!!
 int FS::mv(std::string sourcepath, std::string destpath)
 {
-    std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
+    // std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
 
     std::unique_ptr<std::tuple<std::string, int, std::string>> sourcepathPtr = this->parsePath(sourcepath);
     std::unique_ptr<std::tuple<std::string, int, std::string>> destpathPtr = this->parsePath(destpath);
@@ -971,7 +978,7 @@ int FS::mv(std::string sourcepath, std::string destpath)
 // rm <filepath> removes / deletes the file <filepath>
 int FS::rm(std::string filepath)
 {
-    std::cout << "FS::rm(" << filepath << ")\n";
+    // std::cout << "FS::rm(" << filepath << ")\n";
 
     std::unique_ptr<std::tuple<std::string, int, std::string>> filepathPtr = this->parsePath(filepath);
     if(filepathPtr == nullptr) 
@@ -1053,7 +1060,7 @@ int FS::rm(std::string filepath)
 // ISSUE Possibly with writing blocks over range or something due to added \n character
 int FS::append(std::string filepath1, std::string filepath2)
 {
-    std::cout << "FS::append(" << filepath1 << "," << filepath2 << ")\n";
+    // std::cout << "FS::append(" << filepath1 << "," << filepath2 << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> filepath1Ptr = this->parsePath(filepath1);
     std::unique_ptr<std::tuple<std::string, int, std::string>> filepath2Ptr = this->parsePath(filepath2);
     std::string filepath1String = std::get<0>(*filepath1Ptr);
@@ -1189,11 +1196,13 @@ int FS::append(std::string filepath1, std::string filepath2)
 // in the current directory
 int FS::mkdir(std::string dirpath)
 {
-    std::cout << "FS::mkdir(" << dirpath << ")\n";
+    // std::cout << "FS::mkdir(" << dirpath << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(dirpath);
 
     if(parsedPathPtr == nullptr)
         return WRONG_PATH_FORMAT;
+    if(std::get<0>(*parsedPathPtr).size() > 55)
+        return FILENAME_TOO_LARGE;
 
     std::string parentFilename = std::get<2>(*parsedPathPtr);
     dir_entry dirBefore = this->currentWorkingDir;
@@ -1241,8 +1250,8 @@ int FS::mkdir(std::string dirpath)
 // cd <dirpath> changes the current (working) directory to the directory named <dirpath>
 int FS::cd(std::string dirpath, bool muteCall)
 {   
-    if(!muteCall)
-        std::cout << "FS::cd(" << dirpath << ")\n";
+    // if(!muteCall)
+    //     std::cout << "FS::cd(" << dirpath << ")\n";
     std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(dirpath);
     dir_entry dirBefore = this->currentWorkingDir;
    
@@ -1277,7 +1286,7 @@ int FS::cd(std::string dirpath, bool muteCall)
 
 int FS::pwd()
 {
-    std::cout << "FS::pwd()\n";
+    // std::cout << "FS::pwd()\n";
     if(std::string(this->currentWorkingDir.file_name).compare("/") == 0)
     {
         std::cout << "/" << "\n";
@@ -1296,6 +1305,7 @@ int FS::pwd()
     }
 
     this->currentWorkingDir = dirBefore;
+    this->loadNewDirectory();
     std::cout << "/" << path << "\n";
     return 0;
 }
@@ -1304,7 +1314,7 @@ int FS::pwd()
 // file <filepath> to <accessrights>.
 int FS::chmod(std::string accessrights, std::string filepath)
 {
-    std::cout << "FS::chmod(" << accessrights << "," << filepath << ")\n";
+    // std::cout << "FS::chmod(" << accessrights << "," << filepath << ")\n";
     
     int accessNum = 0;
     if(accessrights.size() != 1){
