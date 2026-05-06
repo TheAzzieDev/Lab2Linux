@@ -632,9 +632,28 @@ int FS::ls()
 
     int count = 0;
     int index = 0;
+
+    std::vector<dir_entry> entryVector;
+    for(int i = 0; i < AMOUNT_OF_DIRS; i++){
+        entryVector.push_back(this->dirEntries[i]);
+    }
+
+    for (int i = 1; i < AMOUNT_OF_DIRS; ++i) {
+        dir_entry key = entryVector.at(i);
+        int j = i - 1;
+
+        while (j >= 0 && std::string(entryVector.at(j).file_name).compare(key.file_name) > 0) {
+            entryVector.at(j + 1)= entryVector.at(j);
+            j = j - 1;
+        }
+        entryVector.at(j + 1) = key;
+    }
+
+
+
     while (index < AMOUNT_OF_DIRS)
     {
-        dir_entry currentEntry = this->dirEntries[index++];
+        dir_entry currentEntry = entryVector.at(index++);
         std::string filename = currentEntry.file_name;
         std::string size = std::to_string(currentEntry.size);
         std::string type = "";
