@@ -265,14 +265,9 @@ int FS::getDirIndex(std::string path)
 void FS::loadDirectory() {
 
     this->deserializeEntries(ROOT_BLOCK);
-    if (this->dirCount == 0) {
-        std::string filename = "/";
-        std::string parentFilename = "..";
-        dir_entry root = dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
-  
-        this->writeDirectoryEntry(root);
-    }
-    this->currentWorkingDir = this->dirEntries[0];
+    std::string filename = "/";
+    dir_entry root = dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+    this->currentWorkingDir = root;
     uint8_t buffer[BLOCK_SIZE];
     this->disk.read(ROOT_BLOCK, buffer);
 }
@@ -648,56 +643,50 @@ int FS::ls()
         else
             type = "dir";
         if (filename.compare("") != 0){
-            if(filename.compare(this->currentWorkingDir.file_name) != 0 && 
-            filename.compare("..") != 0)
-            {
                 if(count == 0){
                     std::cout << "name";
                     for(int i = 0; i < FILENAME_CHARS - sizeOfNameString; i++)
                         std::cout << " ";
                     std::cout << "type" << "\t"  "accessRights" << "\t" << "size" << "\n";
                 }
-
-                int spaceFile = FILENAME_CHARS - filename.size();
-                std::string result = filename;
-                for(int i = 0; i < spaceFile; i++){
-                    filename += " ";
-                }   
-                
-                std::string accessRightsString = "";
-                int accessRights = currentEntry.access_rights;
-                switch (accessRights)
-                {
-                case READ:
-                    accessRightsString = "r--";
-                    break;
-                case WRITE:
-                    accessRightsString = "-w-";
-                    break;
-                case EXECUTE:
-                    accessRightsString = "--x";
-                    break;
-                case READ + EXECUTE:
-                    accessRightsString = "r-x";
-                    break;
-                case READ + WRITE:
-                    accessRightsString = "rw-";
-                    break;
-                case WRITE + EXECUTE:
-                    accessRightsString = "-wx";
-                    break;   
-                case WRITE + EXECUTE + READ:
-                    accessRightsString = "rwx";
-                    break;  
-                default:
-                    break;
-                }
-                
-                std::cout << filename << type << "\t" << accessRightsString << "\t" << "\t" << size << "\n";
+                if(count != 0 || this->currentWorkingDir.first_blk == ROOT_BLOCK){
+                    int spaceFile = FILENAME_CHARS - filename.size();
+                    std::string result = filename;
+                    for(int i = 0; i < spaceFile; i++){
+                        filename += " ";
+                    }   
+                    
+                    std::string accessRightsString = "";
+                    int accessRights = currentEntry.access_rights;
+                    switch (accessRights)
+                    {
+                    case READ:
+                        accessRightsString = "r--";
+                        break;
+                    case WRITE:
+                        accessRightsString = "-w-";
+                        break;
+                    case EXECUTE:
+                        accessRightsString = "--x";
+                        break;
+                    case READ + EXECUTE:
+                        accessRightsString = "r-x";
+                        break;
+                    case READ + WRITE:
+                        accessRightsString = "rw-";
+                        break;
+                    case WRITE + EXECUTE:
+                        accessRightsString = "-wx";
+                        break;   
+                    case WRITE + EXECUTE + READ:
+                        accessRightsString = "rwx";
+                        break;  
+                    default:
+                        break;
+                    }
+                    std::cout << filename << type << "\t" << accessRightsString << "\t" << "\t" << size << "\n";
+                }  
                 count++;
-            }
-
-    
         }
            
     }
@@ -1276,31 +1265,19 @@ int FS::pwd()
         return 0;
     } 
 
-    std::unique_ptr<dir_entry> parent = this->findDirectoryEntry("..");
-
-    std::string path = currentWorkingDir.file_name;
-    
-    std::string currentFilename = "";
-    int currentBlock = parent->first_blk;
-    while(currentFilename.compare("/") != 0){
-        uint8_t buffer[BLOCK_SIZE];
-        this->disk.read(currentBlock, buffer);
-        std::string serializedDirEntries = "";
-
-        serializedDirEntries.assign((char*)buffer, BLOCK_SIZE);
-
-        currentFilename = serializedDirEntries.substr(0, FILENAME_CHARS);
-        currentFilename = this->dirParseAttr(currentFilename);
-
-        if(currentFilename.compare("/") != 0)
-            path = currentFilename +  "/" + path;
-        else
-            path = currentFilename + path;
-        
-        serializedDirEntries = serializedDirEntries.substr(DIR_ENTRY_SIZE + FILENAME_CHARS + SIZE_CHARS); 
-        currentBlock = atoi(this->dirParseAttr(serializedDirEntries.substr(0, FIRST_BLK_CHARS)).c_str());
+ 
+    std::string path = this->currentWorkingDir.file_name;
+    dir_entry dirBefore = this->currentWorkingDir;
+    while(this->currentWorkingDir.first_blk != ROOT_BLOCK){
+        this->currentWorkingDir = this->dirEntries[DIR_PARENT];
+        this->loadNewDirectory();
+        std::string currentFilename = this->currentWorkingDir.file_name;
+        if(this->currentWorkingDir.first_blk != ROOT_BLOCK)
+            path = currentFilename + "/" + path;
     }
-    std::cout << path << "\n";
+
+    this->currentWorkingDir = dirBefore;
+    std::cout << "/" << path << "\n";
     return 0;
 }
 
