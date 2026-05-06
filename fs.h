@@ -106,7 +106,7 @@ public:
     void printer(int block);
     
     void safeString(std::string& str);
-    std::unique_ptr<std::tuple<std::string, int, std::string>> parsePath(std::string path);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> parsePath(std::string path, bool fromChmod = false);
  
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
