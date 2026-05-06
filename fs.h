@@ -19,9 +19,10 @@
 #define FILENAME_TOO_LARGE 413
 #define NO_VALID_INDEX -1 
 #define ENTRY_IS_DIR 415
+#define ENTRY_IS_FILE 414
 #define ENTRY_CANNOT_BE_DELETED 405
 #define DIR_SELF 0
-#define DIR_PARENT 1
+#define DIR_PARENT 0
 #define DIR_ENTRY_SIZE 64
 #define AMOUNT_OF_DIRS 64
 #define PLACE_HOLDER_CHAR "?"
@@ -93,7 +94,7 @@ public:
 
 
     int writeDirectoryEntry(dir_entry entry, bool dontAddEntry = false); 
-    dir_entry* findDirectoryEntry(std::string filepath); 
+    std::unique_ptr<dir_entry> findDirectoryEntry(std::string filepath); 
     int getFreeDirEntryIndex();
     int getDirIndex(std::string path);
 
@@ -105,7 +106,7 @@ public:
     void printer(int block);
     
     void safeString(std::string& str);
-    std::unique_ptr<std::tuple<std::string, int>> parsePath(std::string path);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> parsePath(std::string path);
  
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)

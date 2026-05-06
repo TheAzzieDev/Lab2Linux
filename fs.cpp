@@ -28,6 +28,22 @@ TASK5 FUNCTIONS TO implement Access controll
 - LS READ XXXXXXXXX
 
 
+TASK5 making Test 1 functionality work:
+- cdHelper HAS BEEN CHANGED XXXXXXXX
+- cd
+- parsePath
+- loadDirectory
+- mkdir
+- pwd
+- mv
+- rm
+- deserializeEntries Shoould be fine
+- writeDirectoryEntry
+
+Any use of:
+DIR_SELF
+dirEntries[0] assumptions
+
 */
 
 std::string FS::dirParseAttr(std::string inputString)
@@ -59,12 +75,16 @@ void FS::backtrack(std::vector<std::string> visitedDirectories)
 
 int FS::cdHelper(std::string dirpath)
 {
-    dir_entry* entry = this->findDirectoryEntry(dirpath); 
+    std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(dirpath); 
     
     if(dirpath.compare("..") == 0){
-       this->currentWorkingDir = this->dirEntries[DIR_PARENT];
-       this->loadNewDirectory();
-       this->currentWorkingDir = this->dirEntries[DIR_SELF]; 
+        if(entry == nullptr)
+            return 0;
+        dir_entry entryBefore = *entry;
+        this->currentWorkingDir = entryBefore;
+        this->loadNewDirectory();
+        this->currentWorkingDir = entryBefore; 
+        return 0;
     }
     
     if (entry == nullptr)
@@ -72,6 +92,17 @@ int FS::cdHelper(std::string dirpath)
         return FILE_NOT_FOUND;
     }
     else if(dirpath.compare("..") != 0){
+        if(dirpath.compare("/") == 0){
+            if(std::string(this->currentWorkingDir.file_name).compare("/") == 0)
+                return 0;
+            std::string filename = "/";
+            this->currentWorkingDir = dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+            this->loadNewDirectory();
+            return 0;
+        }
+        else if(entry->type != TYPE_DIR){
+            return ENTRY_IS_FILE;
+        }
         this->currentWorkingDir = *entry; 
         this->loadNewDirectory();
     }
@@ -171,17 +202,30 @@ int FS::writeDirectoryEntry(dir_entry entry, bool dontAddEntry)
     return 0;
 }
 
-dir_entry *FS::findDirectoryEntry(std::string filepath)
+std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
 {
     bool found = false;
     int index = 0;
+
+    if(currentWorkingDir.first_blk == ROOT_BLOCK && filepath == "..")
+    {
+        std::string filename = "/";
+        dir_entry* root = new dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
+        return std::unique_ptr<dir_entry>(root);
+    }
+    else if(filepath == "..")
+    {
+        dir_entry entry = this->dirEntries[DIR_PARENT];
+        return std::unique_ptr<dir_entry>(new dir_entry(entry));
+    }
+
     while (!found && index < this->dirCount)
     {
-        dir_entry &entry = this->dirEntries[index++]; // Creates a reference
+        dir_entry entry = this->dirEntries[index++]; // Creates a reference
         std::string name = entry.file_name;
         if (filepath.compare(name) == 0)
         {
-            return &entry; // if not for the first step we return reference to an object which no longer exists
+            return std::unique_ptr<dir_entry>(new dir_entry(entry)); // if not for the first step we return reference to an object which no longer exists
         }
     }
     return nullptr;
@@ -225,10 +269,8 @@ void FS::loadDirectory() {
         std::string filename = "/";
         std::string parentFilename = "..";
         dir_entry root = dir_entry((char *)filename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
-        dir_entry parent = dir_entry((char*)parentFilename.c_str(), 0, ROOT_BLOCK, TYPE_DIR, READ | WRITE | EXECUTE);
   
         this->writeDirectoryEntry(root);
-        this->writeDirectoryEntry(parent);
     }
     this->currentWorkingDir = this->dirEntries[0];
     uint8_t buffer[BLOCK_SIZE];
@@ -301,14 +343,14 @@ void FS::safeString(std::string &str)
         str += '\0';
 }
 
-std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
+std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::string path)
 {
     if (path.empty())
         return nullptr;
 
 
     if (path == "/")
-        return std::unique_ptr<std::tuple<std::string, int>>(new std::tuple<std::string, int>("/", ROOT_BLOCK));
+        return std::unique_ptr<std::tuple<std::string, int, std::string>>(new std::tuple<std::string, int, std::string>("/", ROOT_BLOCK, "/"));
 
    
     if (path.find("//") != std::string::npos)
@@ -321,7 +363,6 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
     bool isAbsolute = (path[0] == '/');
 
     if (isAbsolute) {
-    
         while (std::string(this->currentWorkingDir.file_name) != "/") {
             this->cdHelper("..");
         }
@@ -343,14 +384,22 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
     
     if (parts.empty()) {
         int block = this->currentWorkingDir.first_blk;
+        std::string filename;
+
+        if(isAbsolute)
+            filename = "/";
+        else
+            filename = path;
+
+        std::string parentFilename = this->currentWorkingDir.file_name;
         this->currentWorkingDir = originalDir;
         this->loadNewDirectory();
-        return std::unique_ptr<std::tuple<std::string, int>>(new std::tuple<std::string, int>("/", block));
+        return std::unique_ptr<std::tuple<std::string, int, std::string>>(new std::tuple<std::string, int, std::string>(filename, block, parentFilename));
     }
 
   
     for (size_t i = 0; i < parts.size() - 1; i++) {
-        dir_entry* entry = this->findDirectoryEntry(parts[i]);
+        std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(parts[i]);
         if (entry == nullptr || entry->type != TYPE_DIR) {
             this->currentWorkingDir = originalDir;
             this->loadNewDirectory();
@@ -366,7 +415,7 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
         this->cdHelper(parts[i]);
     }
 
-    dir_entry* entry = this->findDirectoryEntry(parts[parts.size() - 1]);
+    std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(parts[parts.size() - 1]);
     dir_entry entryTest;
     bool flag = false;
     if(entry != nullptr){
@@ -383,12 +432,12 @@ std::unique_ptr<std::tuple<std::string, int>> FS::parsePath(std::string path)
     // Final result
     std::string filename = parts.back();
     int parentBlock = this->currentWorkingDir.first_blk;
-
+    std::string parentFilename = this->currentWorkingDir.file_name;
     // Restore original state
     this->currentWorkingDir = originalDir;
     this->loadNewDirectory();
 
-    return std::unique_ptr<std::tuple<std::string, int>>(new std::tuple<std::string, int>(filename, parentBlock));
+    return std::unique_ptr<std::tuple<std::string, int, std::string>>(new std::tuple<std::string, int, std::string>(filename, parentBlock, parentFilename));
 }
 
 std::string FS::addPadding(std::string filepath)
@@ -428,7 +477,7 @@ int FS::getBlock(std::string filename)
 int FS::create(std::string filepath)
 {
     std::cout << "FS::create(" << filepath << ")\n";
-    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(filepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(filepath);
     if(parsedPathPtr == nullptr)
         return WRONG_PATH_FORMAT;
 
@@ -514,7 +563,7 @@ int FS::create(std::string filepath)
 int FS::cat(std::string filepath)
 {
     std::cout << "FS::cat(" << filepath << ")\n";
-    std::unique_ptr<std::tuple<std::string, int>> dirParsed = this->parsePath(filepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> dirParsed = this->parsePath(filepath);
     if(dirParsed == nullptr)
         return WRONG_PATH_FORMAT;
     dir_entry dirBefore = this->currentWorkingDir;
@@ -522,7 +571,7 @@ int FS::cat(std::string filepath)
     this->loadNewDirectory();
     filepath = std::get<0>(*dirParsed);
 
-    dir_entry* entry = this->findDirectoryEntry(filepath);
+    std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(filepath);
     if(entry == nullptr){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
@@ -661,8 +710,8 @@ int FS::cp(std::string sourcepath, std::string destpath)
 {
     std::cout << "FS::cp(" << sourcepath << "," << destpath << ")\n";
 
-    std::unique_ptr<std::tuple<std::string, int>> sourcepathPtr = this->parsePath(sourcepath);
-    std::unique_ptr<std::tuple<std::string, int>> destpathPtr = this->parsePath(destpath); 
+    std::unique_ptr<std::tuple<std::string, int, std::string>> sourcepathPtr = this->parsePath(sourcepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> destpathPtr = this->parsePath(destpath); 
     dir_entry dirBefore = this->currentWorkingDir;
 
     if(sourcepathPtr == nullptr || destpathPtr == nullptr)
@@ -670,7 +719,7 @@ int FS::cp(std::string sourcepath, std::string destpath)
 
     this->currentWorkingDir.first_blk = std::get<1>(*sourcepathPtr);
     this->loadNewDirectory();
-    dir_entry *source = this->findDirectoryEntry(std::get<0>(*sourcepathPtr));
+    std::unique_ptr<dir_entry> source = this->findDirectoryEntry(std::get<0>(*sourcepathPtr));
     if (source == nullptr){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
@@ -683,7 +732,7 @@ int FS::cp(std::string sourcepath, std::string destpath)
     this->currentWorkingDir.first_blk = std::get<1>(*destpathPtr);
     this->loadNewDirectory();
     dir_entry destParent = this->currentWorkingDir;
-    dir_entry *dest = this->findDirectoryEntry(std::get<0>(*destpathPtr));
+    std::unique_ptr<dir_entry> dest = this->findDirectoryEntry(std::get<0>(*destpathPtr));
 
     if (dest != nullptr && dest->type == TYPE_FILE){
         this->currentWorkingDir = dirBefore;
@@ -800,8 +849,8 @@ int FS::mv(std::string sourcepath, std::string destpath)
 {
     std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
 
-    std::unique_ptr<std::tuple<std::string, int>> sourcepathPtr = this->parsePath(sourcepath);
-    std::unique_ptr<std::tuple<std::string, int>> destpathPtr = this->parsePath(destpath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> sourcepathPtr = this->parsePath(sourcepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> destpathPtr = this->parsePath(destpath);
 
     if(sourcepathPtr == nullptr || destpathPtr == nullptr){
         return WRONG_PATH_FORMAT;
@@ -815,7 +864,7 @@ int FS::mv(std::string sourcepath, std::string destpath)
     
     
     std::string sourceFilename = std::get<0>(*sourcepathPtr);
-    dir_entry * sourceEntryPtr = this->findDirectoryEntry(sourceFilename);
+    std::unique_ptr<dir_entry> sourceEntryPtr = this->findDirectoryEntry(sourceFilename);
 
     if(sourceEntryPtr == nullptr){
         this->currentWorkingDir = dirBefore;
@@ -833,7 +882,7 @@ int FS::mv(std::string sourcepath, std::string destpath)
     std::string destFilename = std::get<0>(*destpathPtr);
     this->currentWorkingDir.first_blk = std::get<1>(*destpathPtr);
     this->loadNewDirectory();
-    dir_entry * destinationEntryPtr = this->findDirectoryEntry(destFilename);
+    std::unique_ptr<dir_entry> destinationEntryPtr = this->findDirectoryEntry(destFilename);
 
     dir_entry destinationEntry; 
     bool isNullFlag = true;
@@ -916,7 +965,7 @@ int FS::rm(std::string filepath)
 {
     std::cout << "FS::rm(" << filepath << ")\n";
 
-    std::unique_ptr<std::tuple<std::string, int>> filepathPtr = this->parsePath(filepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> filepathPtr = this->parsePath(filepath);
     if(filepathPtr == nullptr) 
         return WRONG_PATH_FORMAT;
     
@@ -925,7 +974,7 @@ int FS::rm(std::string filepath)
     this->currentWorkingDir.first_blk = std::get<1>(*filepathPtr);
     this->loadNewDirectory();
 
-    dir_entry *entry = this->findDirectoryEntry(entryStringName);
+    std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(entryStringName);
 
     if (entry == nullptr){
         this->currentWorkingDir = dirBefore;
@@ -997,8 +1046,8 @@ int FS::rm(std::string filepath)
 int FS::append(std::string filepath1, std::string filepath2)
 {
     std::cout << "FS::append(" << filepath1 << "," << filepath2 << ")\n";
-    std::unique_ptr<std::tuple<std::string, int>> filepath1Ptr = this->parsePath(filepath1);
-    std::unique_ptr<std::tuple<std::string, int>> filepath2Ptr = this->parsePath(filepath2);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> filepath1Ptr = this->parsePath(filepath1);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> filepath2Ptr = this->parsePath(filepath2);
     std::string filepath1String = std::get<0>(*filepath1Ptr);
     std::string filepath2String = std::get<0>(*filepath2Ptr);
 
@@ -1009,7 +1058,7 @@ int FS::append(std::string filepath1, std::string filepath2)
     
     this->currentWorkingDir.first_blk = std::get<1>(*filepath1Ptr); 
     this->loadNewDirectory();
-    dir_entry *src = this->findDirectoryEntry(filepath1String);
+    std::unique_ptr<dir_entry> src = this->findDirectoryEntry(filepath1String);
 
     if(src == nullptr)
     {
@@ -1022,7 +1071,7 @@ int FS::append(std::string filepath1, std::string filepath2)
 
     this->currentWorkingDir.first_blk = std::get<1>(*filepath2Ptr); 
     this->loadNewDirectory();
-    dir_entry *dest = this->findDirectoryEntry(filepath2String);
+    std::unique_ptr<dir_entry> dest = this->findDirectoryEntry(filepath2String);
 
     if (dest == nullptr)
     {
@@ -1133,17 +1182,26 @@ int FS::append(std::string filepath1, std::string filepath2)
 int FS::mkdir(std::string dirpath)
 {
     std::cout << "FS::mkdir(" << dirpath << ")\n";
-    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(dirpath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(dirpath);
+
     if(parsedPathPtr == nullptr)
         return WRONG_PATH_FORMAT;
 
+    std::string parentFilename = std::get<2>(*parsedPathPtr);
     dir_entry dirBefore = this->currentWorkingDir;
     dirpath = std::get<0>(*parsedPathPtr);
     this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
+    
+    memset(this->currentWorkingDir.file_name, 0, sizeof(this->currentWorkingDir.file_name));
+    strncpy(
+        this->currentWorkingDir.file_name,
+        (char*)parentFilename.c_str(),
+        sizeof(this->currentWorkingDir.file_name) - 1); 
+    
     this->loadNewDirectory();
 
     std::string filename = std::get<0>(*parsedPathPtr);
-    dir_entry * entryTest = this->findDirectoryEntry(filename);
+    std::unique_ptr<dir_entry> entryTest = this->findDirectoryEntry(filename);
 
     if(entryTest != nullptr)
     {
@@ -1157,14 +1215,13 @@ int FS::mkdir(std::string dirpath)
     dir_entry newDirEntry((char *)dirpath.c_str(), 0, newDirBlock, TYPE_DIR, READ | WRITE | EXECUTE);
     this->writeDirectoryEntry(newDirEntry);
 
-    std::string parrent = "..";
+    std::string parrent = this->currentWorkingDir.file_name;
     int parentBlock = this->currentWorkingDir.first_blk;
     dir_entry parentDirEntry((char*)parrent.c_str(), 0, parentBlock, TYPE_DIR, READ | WRITE | EXECUTE);
     this->currentWorkingDir = newDirEntry;
 
     int previousDirCount = this->dirCount;
     this->dirCount = 0;
-    this->writeDirectoryEntry(newDirEntry, true);
     this->writeDirectoryEntry(parentDirEntry, true);
     this->currentWorkingDir = dirBefore;
     this->dirCount = previousDirCount;
@@ -1178,7 +1235,7 @@ int FS::cd(std::string dirpath, bool muteCall)
 {   
     if(!muteCall)
         std::cout << "FS::cd(" << dirpath << ")\n";
-    std::unique_ptr<std::tuple<std::string, int>> parsedPathPtr = this->parsePath(dirpath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> parsedPathPtr = this->parsePath(dirpath);
     dir_entry dirBefore = this->currentWorkingDir;
    
     if(parsedPathPtr == nullptr){
@@ -1190,7 +1247,7 @@ int FS::cd(std::string dirpath, bool muteCall)
     this->currentWorkingDir.first_blk = std::get<1>(*parsedPathPtr);
     this->loadNewDirectory();
     std::string stringAtEnd = std::get<0>(*parsedPathPtr);
-    dir_entry *entry = this->findDirectoryEntry(stringAtEnd);
+    std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(stringAtEnd);
     
 
     if(entry == nullptr){
@@ -1205,9 +1262,8 @@ int FS::cd(std::string dirpath, bool muteCall)
         return WRONG_PATH_FORMAT;
     }
 
-    this->currentWorkingDir.first_blk = entry->first_blk;
+    this->currentWorkingDir = *entry;
     this->loadNewDirectory();
-    this->currentWorkingDir = this->dirEntries[DIR_SELF];
     return 0;
 }
 
@@ -1220,7 +1276,7 @@ int FS::pwd()
         return 0;
     } 
 
-    dir_entry* parent = this->findDirectoryEntry("..");
+    std::unique_ptr<dir_entry> parent = this->findDirectoryEntry("..");
 
     std::string path = currentWorkingDir.file_name;
     
@@ -1269,7 +1325,7 @@ int FS::chmod(std::string accessrights, std::string filepath)
         return WRONG_PERMISSION_FORMAT;
     }
 
-    std::unique_ptr<std::tuple<std::string, int>> filepathPtr = this->parsePath(filepath);
+    std::unique_ptr<std::tuple<std::string, int, std::string>> filepathPtr = this->parsePath(filepath);
     if(filepathPtr == nullptr)
         return WRONG_PATH_FORMAT;
 
@@ -1280,7 +1336,7 @@ int FS::chmod(std::string accessrights, std::string filepath)
     this->currentWorkingDir.first_blk = parentBlock;
     this->loadNewDirectory();
 
-    dir_entry* entryPtr = this->findDirectoryEntry(filename);
+    std::unique_ptr<dir_entry> entryPtr = this->findDirectoryEntry(filename);
     
     if(entryPtr == nullptr)
     {
