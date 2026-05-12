@@ -677,6 +677,8 @@ int FS::cat(std::string filepath)
                     std::cout << content;
                 }
             }
+            this->currentWorkingDir = dirBefore;
+            this->loadNewDirectory();
             return 0;
         }
     }
