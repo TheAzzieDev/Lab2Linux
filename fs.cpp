@@ -992,7 +992,15 @@ int FS::cp(std::string sourcepath, std::string destpath)
  * mv <sourcepath> <destpath> renames the file <sourcepath> to the name <destpath>,
  * or moves the file <sourcepath> to the directory <destpath> (if dest is a directory)
  * @param sourcepath path to a file relative or absolute
- * @param destpath path to a directory or 
+ * @param destpath path to a directory or the new name of the file in another directory. Cannot Exist
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect or missing permissions
+ * 
+ * 404 : file already exists in current directory
+ * 
  * 
  */
 int FS::mv(std::string sourcepath, std::string destpath)
@@ -1010,13 +1018,24 @@ int FS::mv(std::string sourcepath, std::string destpath)
     std::string sourcepathString = std::get<0>(*sourcepathPtr);
     std::string destpathString = std::get<0>(*destpathPtr);
     int destpathBlock = std::get<1>(*destpathPtr);
+    bool flagNotExists = true;
+
     
     if(destpathBlock == this->currentWorkingDir.first_blk){
         std::unique_ptr<dir_entry> destTest = this->findDirectoryEntry(destpathString);
-        if(destTest == nullptr)
+        if(destTest != nullptr && destTest->type != TYPE_DIR)
         {
-            return FILE_NOT_FOUND;
+            return FILE_EXISTS;
         }
+        flagNotExists = false;
+    }
+
+
+
+    if(sourcepathString.compare(destpathString) == 0 && 
+    std::get<1>(*destpathPtr) == std::get<1>(*sourcepathPtr))
+    {
+        return FILE_EXISTS;
     }
 
     dir_entry dirBefore = this->currentWorkingDir;
@@ -1050,6 +1069,15 @@ int FS::mv(std::string sourcepath, std::string destpath)
     if(destinationEntryPtr != nullptr){
         isNullFlag = false;
         destinationEntry  = *destinationEntryPtr;
+        std::string destinationEntryString = destinationEntry.file_name;
+
+        if(sourceFilename.compare(destinationEntryString) == 0 &&
+        sourceEntry.type == TYPE_FILE && destinationEntry.type == TYPE_FILE
+        ){
+            this->currentWorkingDir = dirBefore;
+            this->loadNewDirectory();
+            return FILE_EXISTS;
+        }
 
         if(!this->hasWritePerm(destinationEntry)){
             this->currentWorkingDir = dirBefore;
