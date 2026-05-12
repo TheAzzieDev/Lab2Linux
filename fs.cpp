@@ -14,39 +14,11 @@
 
 
 
-/*
-TASK5 FUNCTIONS TO implement Access controll
-- CREATE WRITE in DIR  XXXXXXX
-- CAT READ XXXXXXX
-- MV WRITE READ on both XXXXXXX
-- CP source READ, dest WRITE XXXXX
-- RM WRITE  XXXXXXX
-- APPEND source READ dest WRITE
-- MKDIR WRITE in folder XXXXXX
-- CD EXECUTE XXXXXXXX 
-- LS READ XXXXXXXXX
-
-
-TASK5 making Test 1 functionality work:
-- cdHelper HAS BEEN CHANGED XXXXXXXX
-- cd
-- parsePath
-- loadDirectory
-- mkdir
-- pwd
-- mv
-- rm
-- deserializeEntries Shoould be fine
-- writeDirectoryEntry
-
-Any use of:
-DIR_SELF
-dirEntries[0] assumptions
-
-*/
-
-
-
+/**
+ * Helper function used to parse an attribute of directory entry, like filename or size, first block etc.....
+ * @param inputString any attribute in disk for a directory entry. for example ???????????.....filename.txt
+ * @return parsed attribute
+ */
 std::string FS::dirParseAttr(std::string inputString)
 {
 
@@ -67,7 +39,7 @@ std::string FS::dirParseAttr(std::string inputString)
 
 
 /**
- * helper function used in FS::parsePath to backtrack to previous dir entry
+ * helper function used in parsePath to backtrack to previous dir entry
  * @param visitedDirectories vector of visited directories from root
 */
 void FS::backtrack(std::vector<std::string> visitedDirectories)
@@ -81,7 +53,18 @@ void FS::backtrack(std::vector<std::string> visitedDirectories)
     }
 }
 
-
+/**
+ * Helper function used to cd to a relative path.
+ * @param dirpath relative path to directory
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 414 : Trying to cd to a file 
+ * 
+ * 404 : Trying to cd to a directory which does not exist
+ * 
+ */
 int FS::cdHelper(std::string dirpath)
 {
     std::unique_ptr<dir_entry> entry = this->findDirectoryEntry(dirpath); 
@@ -130,7 +113,6 @@ FS::~FS()
 }
 
 // formats the disk, i.e., creates an empty file system
-// FORMAT WORKS!!!
 int FS::format()
 {
     // std::cout << "FS::format()\n";
@@ -150,6 +132,13 @@ int FS::format()
     return 0;
 }
 
+
+/**
+ * Helper function used to get and set the next free block in the FAT-Table
+ * @param blockBefore update block to point to next block in FAT-table / disk. Leave blank if getting a new block
+ * @return -1 if not block is found otherwise returns the free block
+ * 
+ */
 int FS::getFreeBlock(int blockBefore)
 {
     for (int i = FAT_BLOCK + 1; i < NUMBER_OF_BLOCKS; i++)
@@ -209,7 +198,11 @@ int FS::writeDirectoryEntry(dir_entry entry, bool dontAddEntry)
 
 
 
-
+/**
+ * Helper functions used to seach a directory entry in the current working directory
+ * @param filepath relative path to a file
+ * @return nullptr if not found, unique_ptr to dir_entry obj if found
+ */
 std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
 {
     bool found = false;
@@ -250,7 +243,6 @@ std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
      * 
      * -1 : no valid dir entry found
 */ 
-
 int FS::getFreeDirEntryIndex()
 {
 
@@ -468,7 +460,7 @@ std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::st
 /**
  * Used in create, mv, cp, getDirIndex to addding to a filename / directory name to later be stored on the disk
  * @param filepath a string of a filename or directory name
- * @return string of filename or directory name that can best stored withing a directory entry in disk
+ * @return string of filename or directory name that can be stored withing a directory entry in disk
  */
 std::string FS::addPadding(std::string filepath)
 {
@@ -488,7 +480,7 @@ std::string FS::addPadding(std::string filepath)
  * helper function used in create to see if filename already exists
  * @param filename unpadded filname to search for in disk
  * @return disk block if filename found, 0 if not found.
-*/
+ */
 int FS::getBlock(std::string filename)
 {
     for (int block = FAT_BLOCK + 1; block < NUMBER_OF_BLOCKS; block++)
@@ -527,7 +519,6 @@ int FS::getBlock(std::string filename)
  * -1 :  The direcortory block is full
  * 
 */
-
 int FS::create(std::string filepath)
 {
     // std::cout << "FS::create(" << filepath << ")\n";
@@ -832,7 +823,6 @@ int FS::ls()
  * 
  * -1 : Directory is full
  * 
- * 
 */
 int FS::cp(std::string sourcepath, std::string destpath)
 {
@@ -1007,10 +997,12 @@ int FS::cp(std::string sourcepath, std::string destpath)
  * 
  * 0 : OK
  * 
- * 406 : Path is incorrect or missing permissions
+ * 406 : Path is incorrect or missing permissions. For example file is missing read or write or can't cd 
+ * to directory due to missing execution permission
  * 
- * 404 : file already exists in current directory
+ * 404 : File in sourcepath does not exists
  * 
+ * 304 : File exists in specified directory
  * 
  */
 int FS::mv(std::string sourcepath, std::string destpath)
@@ -1175,7 +1167,20 @@ int FS::mv(std::string sourcepath, std::string destpath)
     return 0;
 }
 
-// rm <filepath> removes / deletes the file <filepath>
+/**
+ * rm <filepath> removes / deletes the file <filepath>
+ * @param filepath Can be relative or absolute. Needs to exists, if directory, needs to be empty aswell
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect or missing write permission in directory
+ * 
+ * 404 : The directory entry specified by filepath does not exist
+ * 
+ * 405 : The directory is not empty, tried to delete current working directory.
+ * 
+ */
 int FS::rm(std::string filepath)
 {
     // std::cout << "FS::rm(" << filepath << ")\n";
@@ -1265,10 +1270,22 @@ int FS::rm(std::string filepath)
     return 0;
 }
 
-// append <filepath1> <filepath2> appends the contents of file <filepath1> to
-// the end of file <filepath2>. The file <filepath1> is unchanged.dir_entry
-
-// ISSUE Possibly with writing blocks over range or something due to added \n character
+/**
+ * append <filepath1> <filepath2> appends the contents of file <filepath1> to
+ * the end of file <filepath2>. The file <filepath1> is unchanged.dir_entry
+ * @param filepath1 Can be relative or absolute needs to exist and can't be a file
+ * @param filepath2 Can be relative or absolute needs to exist and can't be a file
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect or missing sufficient permissions
+ * 
+ * 404 : filepath1 or filepath2 does not exist
+ * 
+ * 415 : filepath1 or filepath2 is not a file
+ * 
+*/
 int FS::append(std::string filepath1, std::string filepath2)
 {
     // std::cout << "FS::append(" << filepath1 << "," << filepath2 << ")\n";
@@ -1403,8 +1420,21 @@ int FS::append(std::string filepath1, std::string filepath2)
     return 0;
 }
 
-// mkdir <dirpath> creates a new sub-directory with the name <dirpath>
-// in the current directory
+/** 
+ * mkdir <dirpath> creates a new sub-directory with the name <dirpath>
+ * in the current directory
+ * @param dirpath Can be absolute or relative path for new directory, cannot not exist
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect 
+ * 
+ * 413 : directory name specified by dirpath exceeds limit of 55
+ * 
+ * 304 : The directory already exists
+ * 
+ */
 int FS::mkdir(std::string dirpath)
 {
     // std::cout << "FS::mkdir(" << dirpath << ")\n";
@@ -1458,7 +1488,21 @@ int FS::mkdir(std::string dirpath)
     return 0;
 }
 
-// cd <dirpath> changes the current (working) directory to the directory named <dirpath>
+/**
+ * cd <dirpath> changes the current (working) directory to the directory named <dirpath>
+ * @param dirpath can be absolute path or relative path to a directory
+ * @param muteCall for debugging purposes, prints to terminal if function is called
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect or a directory missing execute permissions in dirpath
+ * 
+ * 404 : The directory does not exists
+ * 
+ * 304 : dirpath is file
+ * 
+ */
 int FS::cd(std::string dirpath, bool muteCall)
 {   
     // if(!muteCall)
@@ -1481,13 +1525,13 @@ int FS::cd(std::string dirpath, bool muteCall)
     if(entry == nullptr){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
-        return WRONG_PATH_FORMAT;
+        return FILE_NOT_FOUND;
     }
 
     if(entry->type == TYPE_FILE){
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
-        return WRONG_PATH_FORMAT;
+        return FILE_EXISTS;
     }
 
     this->currentWorkingDir = *entry;
@@ -1495,6 +1539,12 @@ int FS::cd(std::string dirpath, bool muteCall)
     return 0;
 }
 
+
+/**
+ * Use as pwd in terminal to print current working directory as absolute path
+ * @return Error Code
+ * 0 : OK
+ */
 int FS::pwd()
 {
     // std::cout << "FS::pwd()\n";
@@ -1521,8 +1571,20 @@ int FS::pwd()
     return 0;
 }
 
-// chmod <accessrights> <filepath> changes the access rights for the
-// file <filepath> to <accessrights>.
+/**
+ * chmod <accessrights> <filepath> changes the access rights for the
+ * file <filepath> to <accessrights>.
+ * @param accessrights Number like 1, 2, 3, 4.....etc. View fs.h for table with different possibillities
+ * @param filepath Can be absolute or relative path for a file or directory
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : accessrights argument is either not a digit or wrong format. Between 1 - 7 Or path format is wrong
+ * 
+ * 404 : Directory or file does not exist
+ *  
+ */
 int FS::chmod(std::string accessrights, std::string filepath)
 {
     // std::cout << "FS::chmod(" << accessrights << "," << filepath << ")\n";
@@ -1580,6 +1642,13 @@ int FS::chmod(std::string accessrights, std::string filepath)
     return 0;
 }
 
+
+/**
+ * Helper function used to check for write permission
+ * @param entry dir_entry object
+ * @param mutecall set to true to remove printing missing permission to terminal
+ * @return true if has write permission false if not
+ */
 bool FS::hasWritePerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
@@ -1605,6 +1674,13 @@ bool FS::hasWritePerm(dir_entry entry, bool muteCall)
     }
 }
 
+
+/**
+ * Helper function used to check for execute permission
+ * @param entry dir_entry object
+ * @param mutecall set to true to remove printing missing permission to terminal
+ * @return true if has execute permission false if not
+ */
 bool FS::hasExecutePerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
@@ -1630,6 +1706,12 @@ bool FS::hasExecutePerm(dir_entry entry, bool muteCall)
     }
 }
 
+/**
+ * Helper function used to check for read permission
+ * @param entry dir_entry object
+ * @param mutecall set to true to remove printing missing permission to terminal
+ * @return true if has read permission false if not
+ */
 bool FS::hasReadPerm(dir_entry entry, bool muteCall)
 {
     int accessRights = entry.access_rights;
@@ -1640,8 +1722,16 @@ bool FS::hasReadPerm(dir_entry entry, bool muteCall)
     return false;
 }
 
-// ISSUE1
-// Might be a potentiall problem becuase c strings are null terminated!!!!!!
+
+/**
+ * dir_entry constructor
+ * @param file_name can't execeed 55 character
+ * @param size size of all contents filename block, directories have size 0
+ * @param first_blk The first block of where the file begins or where directory block is
+ * @param type TYPE_DIR or TYPE_FILE 
+ * @param access_rights see table in fs.h to see all options
+ * 
+ */
 dir_entry::dir_entry(char *file_name, uint32_t size, uint16_t first_blk, uint8_t type, uint8_t access_rights)
 {
     memset(this->file_name, 0, sizeof(this->file_name));
@@ -1686,7 +1776,12 @@ dir_entry &dir_entry::operator=(const dir_entry &other)
     return *this;
 }
 
-// FORMAT name-size-
+/**
+ * Helper function used to serialaze entry to be written to disk.
+ * Since block size is 4KB entries all entries in the disk need to be 64 characters
+ * if a field does not take up all space its padded with PLACE_HOLDER_CHAR value.
+ * 
+ */
 std::string dir_entry::serializeEntry()
 {
     std::string toReturn = "";

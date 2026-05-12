@@ -67,6 +67,24 @@ struct dir_entry {
 
 };
 
+
+/****************************
+ * ----PERMISSIONS TABLE----
+ * 1 = --x
+ * 2 = -w-
+ * 3 = -wx
+ * 4 = r-
+ * 5 = r-x
+ * 6 = rw-
+ * 7 = rwx
+ ****************************/
+
+/******************
+ * DOCUMENTATION HAS BEEN MOVED TO fs.cpp file
+ * TIP: Hover over functions to see their usage
+******************/
+
+ 
 class FS {
 private:
     int dirCount; 
@@ -74,6 +92,8 @@ private:
     Disk disk;     
     dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};    
     dir_entry currentWorkingDir;  
+
+    // HELPER FUNCTIONS
 
     void backtrack(std::vector<std::string> visitedDirectories);
 
@@ -106,40 +126,29 @@ public:
 
     FS();
     ~FS();
-    // formats the disk, i.e., creates an empty file system
+   
     int format();
 
-    // create <filepath> creates a new file on the disk, the data content is
-    // written on the following rows (ended with an empty row)
     int create(std::string filepath);
-    // cat <filepath> reads the content of a file and prints it on the screen
+
     int cat(std::string filepath);
-    // ls lists the content in the current directory (files and sub-directories)
+  
     int ls();
 
-    // cp <sourcepath> <destpath> makes an exact copy of the file
-    // <sourcepath> to a new file <destpath>
     int cp(std::string sourcepath, std::string destpath);
-    // mv <sourcepath> <destpath> renames the file <sourcepath> to the name <destpath>,
-    // or moves the file <sourcepath> to the directory <destpath> (if dest is a directory)
+
     int mv(std::string sourcepath, std::string destpath);
-    // rm <filepath> removes / deletes the file <filepath>
+
     int rm(std::string filepath);
-    // append <filepath1> <filepath2> appends the contents of file <filepath1> to
-    // the end of file <filepath2>. The file <filepath1> is unchanged.
+
     int append(std::string filepath1, std::string filepath2);
 
-    // mkdir <dirpath> creates a new sub-directory with the name <dirpath>
-    // in the current directory
     int mkdir(std::string dirpath);
-    // cd <dirpath> changes the current (working) directory to the directory named <dirpath>
+
     int cd(std::string dirpath, bool muteCall = false);
-    // pwd prints the full path, i.e., from the root directory, to the current
-    // directory, including the current directory name
+
     int pwd();
 
-    // chmod <accessrights> <filepath> changes the access rights for the
-    // file <filepath> to <accessrights>.
     int chmod(std::string accessrights, std::string filepath);
 };
 
