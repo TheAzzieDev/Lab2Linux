@@ -1112,12 +1112,6 @@ int FS::mv(std::string sourcepath, std::string destpath)
         return FILE_EXISTS;
     }
 
-
-    this->currentWorkingDir = dirBefore;
-    this->loadNewDirectory();
-
-
- 
     this->currentWorkingDir.first_blk = std::get<1>(*sourcepathPtr);
     this->loadNewDirectory();
     
@@ -1311,7 +1305,6 @@ int FS::append(std::string filepath1, std::string filepath2)
         this->loadNewDirectory();
         return FILE_NOT_FOUND;
     }
-
     dir_entry srcEntry = *src;
 
     this->currentWorkingDir.first_blk = std::get<1>(*filepath2Ptr); 
