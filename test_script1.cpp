@@ -50,13 +50,6 @@ Shell::~Shell()
 void
 Shell::run()
 {
-
-    filesystem.mkdir("testdir");
-    
-    for(int i = 0; i < -1; i++){
-        std::cout << "test" << "\n";
-    }
-
     std::string cmd, arg1, arg2;
     int ret_val = 0;
     int fd[2];
@@ -77,7 +70,6 @@ Shell::run()
     if (ret_val) {
         std::cout << "Error: format failed, error code " << ret_val << std::endl;
     }
-
     // check that the disk is empty
     std::cout << "Executing ls" << std::endl;
     std::cout << "Expected output:" << std::endl;
@@ -107,10 +99,6 @@ Shell::run()
         std::cout << "Error: create " << arg1;
         std::cout << " failed, error code " << ret_val << std::endl;
     }
-
-
-    
-
     // check that the file is there
     std::cout << "Expected output:" << std::endl;
     std::cout << "name\t size" << std::endl;
@@ -127,7 +115,6 @@ Shell::run()
     fw = open("input3.txt", O_RDONLY);
     dup2(fw,0);
     ret_val = filesystem.create(arg1);
-
     if (ret_val) {
         std::cout << "Error: create " << arg1;
         std::cout << " failed, error code " << ret_val << std::endl;

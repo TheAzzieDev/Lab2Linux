@@ -34,33 +34,6 @@ Shell::~Shell()
 void
 Shell::run()
 {
-
-    // filesystem.create("tester.yx1");
-    // filesystem.mkdir("test");
-    // filesystem.chmod("7", "test");
-    // int test = filesystem.create("test/tester.yx");
-
-    // test = filesystem.mkdir("/test/bob");
-    // filesystem.chmod("6", "test");
-    // test = filesystem.cd("/test/bob");
-    // filesystem.chmod("7", "test");
-    // filesystem.chmod("7", "tester.yx1");
-
-
-
-    // //test = filesystem.mv("tester.yx1", "test");
-    // filesystem.chmod("7", "test");
-    // test = filesystem.cp("tester.yx1", "test");
-    // filesystem.cd("/test");
-    // filesystem.chmod("7", "test");
-    // filesystem.chmod("7", "tester.yx1");
-    // filesystem.chmod("7", "tester.yx");
-    // //test = filesystem.rm("test/tester.yx1");
-    // test = filesystem.append("tester.yx", "tester.yx1");
-    // filesystem.cat("tester.yx1");
-    // std::string input3 = "hej heja hejare\n";
-
-    // return;
     std::string cmd, arg1, arg2;
     int ret_val = 0;
     int fd[2];
@@ -76,7 +49,6 @@ Shell::run()
     std::cout << "Task 5 ..." << std::endl;
     PRINTDIV2;
 
-
     std::cout << "Testing access rights..." << std::endl;
     std::cout << "Starting with empty disk..." << std::endl;
     std::cout << "Use \"/\" as test dir..." << std::endl;
@@ -91,11 +63,6 @@ Shell::run()
     arg1 = "f2";
     filesystem.create(arg1);
     close(fw);
-    filesystem.ls();
-
-    
-    std::cout << "checking start files..." << std::endl;
-
 
     std::cout << "checking start files..." << std::endl;
     std::cout << "Expected output:" << std::endl;

@@ -70,16 +70,12 @@ Shell::run()
     if (ret_val)
         std::cout << "Error: format failed, error code " << ret_val << std::endl;
     arg1 = "f1";
-
-    
-
     fw = open("input1.txt", O_RDONLY);
     dup2(fw, 0);
     ret_val = filesystem.create(arg1);
     if (ret_val)
         std::cout << "Error: create " << arg1 << " failed, error code " << ret_val << std::endl;
     close(fw);
-
     arg1 = "f2";
     fw = open("input2.txt", O_RDONLY);
     dup2(fw, 0);
@@ -94,7 +90,6 @@ Shell::run()
     ret_val = filesystem.mkdir(arg1);
     if (ret_val) 
         std::cout << "Error: mkdir(d1) " << arg1 << " failed, error code " << ret_val << std::endl;
-
     std::cout << "Expected output:" << std::endl;
     std::cout << "name\t type\t size" << std::endl;
     std::cout << "d1\t dir\t -" << std::endl;
@@ -182,10 +177,7 @@ Shell::run()
     std::cout << "f1\t file\t 16" << std::endl;
     std::cout << "/" << std::endl;
     std::cout << "Actual output:" << std::endl;
-
-
     ret_val = filesystem.pwd();
-    //filesystem.cd("d1");
     if (ret_val)
         std::cout << "Error: pwd failed, error code " << ret_val << std::endl;
     ret_val = filesystem.ls();
