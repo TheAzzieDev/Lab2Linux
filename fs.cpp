@@ -567,10 +567,7 @@ int FS::create(std::string filepath)
     std::string toAddString = "";
 
     toAddString += filenameInDisk;
-    // for (int i = 0; i < BLOCK_SIZE; i++) {
-    //    toAddString += "A";
-    // }
-    // currentSize = toAddString.size();
+    currentSize = toAddString.size();
     int totalSizeOfFile = 0;
 
     while (std::getline(std::cin, userInput) && userInput.size() && !userInput.empty())
@@ -1400,12 +1397,22 @@ int FS::append(std::string filepath1, std::string filepath2)
                 toAdd = "";
             }
         }
-
         else
         {
-            this->safeString(contentSrc);
-            destBlock = this->getFreeBlock(destBlock);
-            this->disk.write(destBlock, (uint8_t *)contentSrc.c_str());
+            if(contentSrc.size() > BLOCK_SIZE){
+                toAdd = contentSrc.substr(BLOCK_SIZE);
+                std::string addNow = contentSrc.substr(0, BLOCK_SIZE);
+
+                this->safeString(addNow);
+                destBlock = this->getFreeBlock(destBlock);
+                this->disk.write(destBlock, (uint8_t *)addNow.c_str());
+            }
+            else{
+                this->safeString(contentSrc);
+                destBlock = this->getFreeBlock(destBlock);
+                this->disk.write(destBlock, (uint8_t *)contentSrc.c_str());
+            }
+            
         }
 
         srcBlock = this->fat[srcBlock];
