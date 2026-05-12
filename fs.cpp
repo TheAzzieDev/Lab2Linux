@@ -169,7 +169,7 @@ int FS::getFreeBlock(int blockBefore)
 
 
  /**
-     * helper function used in FS::create, FS::cp, FS::mv, FS::mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
+     * helper function used in create, cp, mv, mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
      * @param entry dir_entry object, in current directory / dirEntries
      * @param dontAddEntry set to true if its in current directory otherwise false
      * @return Error Code. 
@@ -207,6 +207,9 @@ int FS::writeDirectoryEntry(dir_entry entry, bool dontAddEntry)
     return 0;
 }
 
+
+
+
 std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
 {
     bool found = false;
@@ -238,7 +241,7 @@ std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
 
 
 /**
-     * helper function used in FS::create, FS::cp, FS::mv, FS::mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
+     * helper function used in create, cp, mv, mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
      * @param entry dir_entry object, in current directory / dirEntries
      * @param dontAddEntry set to true if its in current directory otherwise false
      * @return Error Code. 
@@ -268,7 +271,7 @@ int FS::getFreeDirEntryIndex()
 }
 
 /**
-     * helper function used in FS::mv, FS::rm, FS::append, FS::chmod to find file in disk. 
+     * helper function used in mv, rm, append, chmod to find file in disk. 
      * @param path the filename in disk without padding
      * @return index or Error Code. 
      * -1 : entry not found
@@ -286,7 +289,7 @@ int FS::getDirIndex(std::string path)
 }
 
 
-// Wrapper around deserializeEntries used in FS::format to initally load directory entries
+// Wrapper around deserializeEntries used in format to initally load directory entries
 void FS::loadDirectory() {
 
     this->deserializeEntries(ROOT_BLOCK);
@@ -463,7 +466,7 @@ std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::st
 
 
 /**
- * Used in FS::create, FS::mv, FS::cp, FS::getDirIndex to addding to a filename / directory name to later be stored on the disk
+ * Used in create, mv, cp, getDirIndex to addding to a filename / directory name to later be stored on the disk
  * @param filepath a string of a filename or directory name
  * @return string of filename or directory name that can best stored withing a directory entry in disk
  */
@@ -486,7 +489,6 @@ std::string FS::addPadding(std::string filepath)
  * @param filename unpadded filname to search for in disk
  * @return disk block if filename found, 0 if not found.
 */
-
 int FS::getBlock(std::string filename)
 {
     for (int block = FAT_BLOCK + 1; block < NUMBER_OF_BLOCKS; block++)
@@ -622,7 +624,7 @@ int FS::create(std::string filepath)
  * 
  * 404 : The file does not exist
  * 
- * 415 : Can't use FS::cat on a directory
+ * 415 : Can't use cat on a directory
  * 
 */
 int FS::cat(std::string filepath)
@@ -822,7 +824,7 @@ int FS::ls()
  * 
  * 406 : Path is incorrect or missing permissions
  * 
- * 404 : sourcepath does not exist
+ * 404 : sourcepath does not exist, or sourcepath is a directory and not a file
  * 
  * 304 : The File already exists in the destinatin parent directory
  * 
@@ -846,7 +848,15 @@ int FS::cp(std::string sourcepath, std::string destpath)
     this->currentWorkingDir.first_blk = std::get<1>(*sourcepathPtr);
     this->loadNewDirectory();
     std::unique_ptr<dir_entry> source = this->findDirectoryEntry(std::get<0>(*sourcepathPtr));
+    
     if (source == nullptr){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return FILE_NOT_FOUND;
+    }
+
+    if(source->type == TYPE_DIR)
+    {
         this->currentWorkingDir = dirBefore;
         this->loadNewDirectory();
         return FILE_NOT_FOUND;
