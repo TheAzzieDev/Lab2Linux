@@ -1458,6 +1458,13 @@ int FS::mkdir(std::string dirpath)
     
     this->loadNewDirectory();
 
+    if(!this->hasExecutePerm(this->currentWorkingDir) || 
+    !this->hasWritePerm(this->currentWorkingDir)){
+        this->currentWorkingDir = dirBefore;
+        this->loadNewDirectory();
+        return WRONG_PERMISSIONS;
+    }
+
     std::string filename = std::get<0>(*parsedPathPtr);
     std::unique_ptr<dir_entry> entryTest = this->findDirectoryEntry(filename);
 
