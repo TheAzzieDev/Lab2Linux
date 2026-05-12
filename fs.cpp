@@ -45,6 +45,8 @@ dirEntries[0] assumptions
 
 */
 
+
+
 std::string FS::dirParseAttr(std::string inputString)
 {
 
@@ -61,6 +63,13 @@ std::string FS::dirParseAttr(std::string inputString)
     return "";
 }
 
+
+
+
+/**
+ * helper function used in FS::parsePath to backtrack to previous dir entry
+ * @param visitedDirectories vector of visited directories from root
+*/
 void FS::backtrack(std::vector<std::string> visitedDirectories)
 {
     while(std::string("/").compare(this->currentWorkingDir.file_name) != 0){
@@ -71,6 +80,7 @@ void FS::backtrack(std::vector<std::string> visitedDirectories)
         this->cdHelper(directory);
     }
 }
+
 
 int FS::cdHelper(std::string dirpath)
 {
@@ -157,21 +167,17 @@ int FS::getFreeBlock(int blockBefore)
     return -1;
 }
 
-void FS::testArgs(uint8_t *buffer)
-{
-    std::string test = (char *)buffer;
-    std::cout << test << "\n";
 
-    uint8_t anotherTest[BLOCK_SIZE];
-    for (int i = 0; i < test.size(); i++)
-    {
-        anotherTest[i] = test[i];
-    }
-    anotherTest[test.size()] = '\0';
-    std::string sometingElse = (char *)anotherTest;
-    std::cout << sometingElse << "\n";
-}
-
+ /**
+     * helper function used in FS::create, FS::cp, FS::mv, FS::mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
+     * @param entry dir_entry object, in current directory / dirEntries
+     * @param dontAddEntry set to true if its in current directory otherwise false
+     * @return Error Code. 
+     * 
+     * 0 : OK
+     * 
+     * -1 : no valid dir entry found
+*/ 
 int FS::writeDirectoryEntry(dir_entry entry, bool dontAddEntry)
 {
 
@@ -230,6 +236,18 @@ std::unique_ptr<dir_entry> FS::findDirectoryEntry(std::string filepath)
     return nullptr;
 }
 
+
+/**
+     * helper function used in FS::create, FS::cp, FS::mv, FS::mkdir to write dir_entry both in secondary memory and ram if dontAddEntry is true
+     * @param entry dir_entry object, in current directory / dirEntries
+     * @param dontAddEntry set to true if its in current directory otherwise false
+     * @return Error Code. 
+     * 
+     * 0 : OK
+     * 
+     * -1 : no valid dir entry found
+*/ 
+
 int FS::getFreeDirEntryIndex()
 {
 
@@ -249,6 +267,12 @@ int FS::getFreeDirEntryIndex()
     return NO_VALID_INDEX;
 }
 
+/**
+     * helper function used in FS::mv, FS::rm, FS::append, FS::chmod to find file in disk. 
+     * @param path the filename in disk without padding
+     * @return index or Error Code. 
+     * -1 : entry not found
+*/ 
 int FS::getDirIndex(std::string path)
 {
     uint8_t buffer[BLOCK_SIZE];
@@ -261,6 +285,8 @@ int FS::getDirIndex(std::string path)
     return index;
 }
 
+
+// Wrapper around deserializeEntries used in FS::format to initally load directory entries
 void FS::loadDirectory() {
 
     this->deserializeEntries(ROOT_BLOCK);
@@ -272,13 +298,17 @@ void FS::loadDirectory() {
 }
 
 
-//Loads new dirEntry
+// Wrapper arround deserializeEntries, which is more memorable. Used in all commands to get entries in current working directory
 void FS::loadNewDirectory()
 {
     this->deserializeEntries(this->currentWorkingDir.first_blk);
    
 }
 
+/**
+ * Used to load and deserialize all the directory entries in disk for given disk block. 
+ * @param block any block in the disk
+ */
 void FS::deserializeEntries(int block)
 {
     dir_entry newEntry;
@@ -309,27 +339,10 @@ void FS::deserializeEntries(int block)
     }
 }
 
-void FS::printer(int block)
-{
-    if (block == FAT_EOF)
-    {
-        std::cout << "END OF FILE!\n";
-        return;
-    }
-    uint8_t newBuffer[BLOCK_SIZE];
-
-    while (block != FAT_EOF && block != FAT_FREE)
-    {
-        std::cout << "___________________________\n";
-        this->disk.read(block, newBuffer);
-        std::string result = "";
-        result.assign((char *)newBuffer, BLOCK_SIZE);
-        std::cout << result << "\n";
-        std::cout << "___________________________\n";
-        block = this->fat[block];
-    }
-}
-
+/**
+ * std::string puts garbage after the the end of the string. use this function to make the string safe for writing to disk
+ * @param str string to padd with null-terminated characters
+ */
 void FS::safeString(std::string &str)
 {
     int toPadd = BLOCK_SIZE - str.size();
@@ -337,6 +350,18 @@ void FS::safeString(std::string &str)
         str += '\0';
 }
 
+/**
+ * helper function used in all commands to check for a valid path 
+ * @param path a path in any form 
+ * @param fromChmod no need to set this one except form chmod. could not change permissions otherwise
+ * @return either a pointer to tuple where
+ * 
+ * index 0 : filname or directory name of end string
+ * 
+ * index 1 : parent disk block
+ * 
+ * index 2 : parent directory name 
+ */
 std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::string path, bool fromChmod)
 {
     if (path.empty())
@@ -423,11 +448,11 @@ std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::st
         return nullptr;
     }
 
-    // Final result
+    
     std::string filename = parts.back();
     int parentBlock = this->currentWorkingDir.first_blk;
     std::string parentFilename = this->currentWorkingDir.file_name;
-    // Restore original state
+
     this->currentWorkingDir = originalDir;
     this->loadNewDirectory();
 
@@ -436,6 +461,12 @@ std::unique_ptr<std::tuple<std::string, int, std::string>> FS::parsePath(std::st
     return std::unique_ptr<std::tuple<std::string, int, std::string>>(new std::tuple<std::string, int, std::string>(filename, parentBlock, parentFilename));
 }
 
+
+/**
+ * Used in FS::create, FS::mv, FS::cp, FS::getDirIndex to addding to a filename / directory name to later be stored on the disk
+ * @param filepath a string of a filename or directory name
+ * @return string of filename or directory name that can best stored withing a directory entry in disk
+ */
 std::string FS::addPadding(std::string filepath)
 {
     std::string filenameInDisk = "";
@@ -447,6 +478,14 @@ std::string FS::addPadding(std::string filepath)
     filenameInDisk += filepath;
     return filenameInDisk;
 }
+
+
+
+/**
+ * helper function used in create to see if filename already exists
+ * @param filename unpadded filname to search for in disk
+ * @return disk block if filename found, 0 if not found.
+*/
 
 int FS::getBlock(std::string filename)
 {
@@ -466,10 +505,27 @@ int FS::getBlock(std::string filename)
     return 0;
 }
 
-// create <filepath> creates a new file on the disk, the data content is
-// written on the following rows (ended with an empty row)
-// CHANGE LATER
-// We are not checking length of filenames.
+
+/**
+ * create <filepath> creates a new file on the disk, the data content is
+ * written on the following rows (ended with an empty row)
+ * @param filepath any path wether its relative or absolute, where filepath <= 55
+ * @return Error Code
+ * 
+ * 0  :  OK
+ * 
+ * 406 : Path is incorrect
+ * 
+ * 403 : Parent directory to the file being created is missing writing permission
+ * 
+ * 304 : Parent directory to the file being created, already contains entry with filename **filepath**
+ * 
+ * 413 : The argument sent in to filepath exceeds limit of 55 characters
+ * 
+ * -1 :  The direcortory block is full
+ * 
+*/
+
 int FS::create(std::string filepath)
 {
     // std::cout << "FS::create(" << filepath << ")\n";
@@ -555,7 +611,20 @@ int FS::create(std::string filepath)
     return 0;
 }
 
-// cat <filepath> reads the content of a file and prints it on the screen
+/**
+ * cat <filepath> reads the content of a file and prints it on the screen
+ * @param filepath can be both relative and absolute, needs to exist
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect
+ * 
+ * 404 : The file does not exist
+ * 
+ * 415 : Can't use FS::cat on a directory
+ * 
+*/
 int FS::cat(std::string filepath)
 {
     // std::cout << "FS::cat(" << filepath << ")\n";
@@ -623,7 +692,13 @@ int FS::cat(std::string filepath)
     return FILE_NOT_FOUND;
 }
 
-// ls lists the content in the currect directory (files and sub-directories)
+/**
+ * ls lists the content in the currect directory (files and sub-directories)
+ * @return Error Code
+ *  
+ * 0 : OK
+ * 
+ */ 
 int FS::ls()
 {
 
@@ -737,8 +812,26 @@ int FS::ls()
     return 0;
 }
 
-// cp <sourcepath> <destpath> makes an exact copy of the file
-// MIGHT BE A PROBLEM WITH COPYING TO SAME DIR
+/**
+ * cp <sourcepath> <destpath> makes an exact copy of the file
+ * @param sourcepath can both relative or absolute filepath, needs exists
+ * @param destpath can both relative or absolute filepath, if it's a filename it cannot exist in the parent directory
+ * @return Error Code
+ * 
+ * 0 : OK
+ * 
+ * 406 : Path is incorrect or missing permissions
+ * 
+ * 404 : sourcepath does not exist
+ * 
+ * 304 : The File already exists in the destinatin parent directory
+ * 
+ * 413 : destpath filename is too large
+ * 
+ * -1 : Directory is full
+ * 
+ * 
+*/
 int FS::cp(std::string sourcepath, std::string destpath)
 {
     // std::cout << "FS::cp(" << sourcepath << "," << destpath << ")\n";
@@ -893,10 +986,15 @@ int FS::cp(std::string sourcepath, std::string destpath)
     return 0;
 }
 
-// mv <sourcepath> <destpath> renames the file <sourcepath> to the name <destpath>,
-// or moves the file <sourcepath> to the directory <destpath> (if dest is a directory)
 
-//LEFT OF HERE!!!!!!!!
+
+/**
+ * mv <sourcepath> <destpath> renames the file <sourcepath> to the name <destpath>,
+ * or moves the file <sourcepath> to the directory <destpath> (if dest is a directory)
+ * @param sourcepath path to a file relative or absolute
+ * @param destpath path to a directory or 
+ * 
+ */
 int FS::mv(std::string sourcepath, std::string destpath)
 {
     // std::cout << "FS::mv(" << sourcepath << "," << destpath << ")\n";
@@ -1548,15 +1646,6 @@ dir_entry &dir_entry::operator=(const dir_entry &other)
     this->type = other.type;
     this->access_rights = other.access_rights;
     return *this;
-}
-
-void dir_entry::safeFileName(std::string filename)
-{
-    memset(this->file_name, 0, sizeof(this->file_name));
-    strncpy(
-        this->file_name,
-        filename.c_str(),
-        sizeof(this->file_name) - 1);
 }
 
 // FORMAT name-size-

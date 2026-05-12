@@ -59,8 +59,8 @@ struct dir_entry {
     uint8_t access_rights);
 
     dir_entry(); 
-    dir_entry& operator=(const dir_entry& other);
-    void safeFileName(std::string filename = "");
+    dir_entry& operator=(const dir_entry& other); 
+
 
 
     std::string serializeEntry(); 
@@ -70,31 +70,17 @@ struct dir_entry {
 class FS {
 private:
     int dirCount; 
+    int16_t fat[BLOCK_SIZE/2]; 
+    Disk disk;     
+    dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};    
+    dir_entry currentWorkingDir;  
 
-    std::string dirParseAttr(std::string inputString);    
     void backtrack(std::vector<std::string> visitedDirectories);
+
     int cdHelper(std::string dirpath);
-    // size of a FAT entry is 2 bytes
-public:
-    std::string addPadding(std::string filepath); 
-
-    int16_t fat[BLOCK_SIZE/2];
-    Disk disk; 
-    dir_entry dirEntries[BLOCK_SIZE / sizeof(dir_entry)]{};  
-    dir_entry currentWorkingDir;
-
-    FS();
-    ~FS();
-    // formats the disk, i.e., creates an empty file system
-    int format();
-
-    int getBlock(std::string filename);
-    int getFreeBlock(int blockBefore = -1);
-    void testArgs(uint8_t* buffer);
-
 
     int writeDirectoryEntry(dir_entry entry, bool dontAddEntry = false); 
-    std::unique_ptr<dir_entry> findDirectoryEntry(std::string filepath); 
+
     int getFreeDirEntryIndex();
     int getDirIndex(std::string path);
 
@@ -102,12 +88,27 @@ public:
     void loadNewDirectory();
     void deserializeEntries(int block);
     
-
-    void printer(int block);
-    
     void safeString(std::string& str);
+
     std::unique_ptr<std::tuple<std::string, int, std::string>> parsePath(std::string path, bool fromChmod = false);
- 
+    std::string addPadding(std::string filepath); 
+    std::unique_ptr<dir_entry> findDirectoryEntry(std::string filepath); 
+    std::string dirParseAttr(std::string inputString);   
+
+    int getBlock(std::string filename);
+    int getFreeBlock(int blockBefore = -1);
+
+    bool hasWritePerm(dir_entry entry, bool muteCall = false);
+    bool hasExecutePerm(dir_entry entry, bool muteCall = false);
+    bool hasReadPerm(dir_entry entry, bool muteCall = false);
+
+public:
+
+    FS();
+    ~FS();
+    // formats the disk, i.e., creates an empty file system
+    int format();
+
     // create <filepath> creates a new file on the disk, the data content is
     // written on the following rows (ended with an empty row)
     int create(std::string filepath);
@@ -140,9 +141,6 @@ public:
     // chmod <accessrights> <filepath> changes the access rights for the
     // file <filepath> to <accessrights>.
     int chmod(std::string accessrights, std::string filepath);
-    bool hasWritePerm(dir_entry entry, bool muteCall = false);
-    bool hasExecutePerm(dir_entry entry, bool muteCall = false);
-    bool hasReadPerm(dir_entry entry, bool muteCall = false);
 };
 
 #endif
